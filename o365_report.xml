@@ -1,0 +1,423 @@
+<form>
+  <label>O365 Report v2</label>
+  <fieldset submitButton="false" autoRun="false">
+    <input type="time" token="o365time" searchWhenChanged="true">
+      <label></label>
+      <default>
+        <earliest>-60m@m</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <single>
+        <title>Malware Detection Every 7 Days</title>
+        <search>
+          <query>sourcetype=its:mcas "EVENT_CATEGORY_MALWARE_DETECTED_IN_EMAIL"
+| timechart span=7d count(msg) by msg</query>
+          <earliest>-30d@d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>its:azureatp</title>
+      <table>
+        <title>Hosts Alerts / 24hr</title>
+        <search>
+          <query>index=ITS_O365 sourcetype=its:azureatp
+| stats count by shost
+| dedup shost
+| table shost, count
+| sort count desc</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">20</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">row</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <format type="color" field="Count of 1547221862.361653">
+          <colorPalette type="minMidMax" maxColor="#D6563C" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+        <format type="color" field="Hits">
+          <colorPalette type="minMidMax" maxColor="#6A5C9E" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+        <format type="color" field="count">
+          <colorPalette type="minMidMax" maxColor="#6A5C9E" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+        <drilldown>
+          <link target="_blank">search?q=index=ITS_O365 sourcetype=its:azureatp shost="$click.value$"&amp;earliest=-24h@h&amp;latest=now</link>
+        </drilldown>
+      </table>
+    </panel>
+    <panel>
+      <title>its:azureatp</title>
+      <table>
+        <title>Top Alert type / 24hr</title>
+        <search>
+          <query>index=ITS_O365 sourcetype=its:azureatp
+| stats count by azureatp_Alert
+| dedup azureatp_Alert
+| table azureatp_Alert, count
+| sort count desc</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">20</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">row</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <format type="color" field="Count of 1547221862.361653">
+          <colorPalette type="minMidMax" maxColor="#D6563C" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+        <format type="color" field="Hits">
+          <colorPalette type="minMidMax" maxColor="#6A5C9E" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+        <format type="color" field="count">
+          <colorPalette type="minMidMax" maxColor="#F7BC38" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+        <drilldown>
+          <link target="_blank">search?q=index=ITS_O365 sourcetype=its:azureatp azureatp_Alert="$click.value$"&amp;earliest=-24h@h&amp;latest=now</link>
+        </drilldown>
+      </table>
+    </panel>
+    <panel>
+      <title>its:azureatp</title>
+      <chart>
+        <title>Chart / Alert type / 24hr</title>
+        <search>
+          <query>index=ITS_O365 sourcetype=its:azureatp
+| timechart count by azureatp_Alert</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">top</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>its:mcas</title>
+      <chart>
+        <title>Destination Service Name</title>
+        <search>
+          <query>index=ITS_O365 sourcetype="its:mcas"| top limit=20 destServiceName</query>
+          <earliest>$o365time.earliest$</earliest>
+          <latest>$o365time.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>its:mcas</title>
+      <chart>
+        <title>Request Client Application</title>
+        <search>
+          <query>index=ITS_O365 sourcetype="its:mcas"| top limit=20 req_clientApp</query>
+          <earliest>$o365time.earliest$</earliest>
+          <latest>$o365time.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>its:mcas</title>
+      <table>
+        <title>Top User Activity</title>
+        <search>
+          <query>index=ITS_O365 sourcetype="its:mcas"
+| stats count by user
+| dedup user
+| table user, count
+| sort count desc</query>
+          <earliest>$o365time.earliest$</earliest>
+          <latest>$o365time.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">heatmap</option>
+        <option name="drilldown">row</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="count">
+          <colorPalette type="minMidMax" maxColor="#1E93C6" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+        <drilldown>
+          <link target="_blank">search?q=index=ITS_O365 sourcetype="its:mcas" User="$click.value$"&amp;earliest=$o365time.earliest$&amp;latest=$o365time.latest$</link>
+        </drilldown>
+      </table>
+    </panel>
+    <panel>
+      <title>its:mcas</title>
+      <chart>
+        <title>Top Actions</title>
+        <search>
+          <query>index=ITS_O365 sourcetype="its:mcas"| top limit=20 message</query>
+          <earliest>$o365time.earliest$</earliest>
+          <latest>$o365time.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>its:mcas</title>
+      <table>
+        <title>Top IPs</title>
+        <search id="o365_mcas">
+          <query>index=ITS_O365 sourcetype="its:mcas"
+| stats count by dvc 
+| dedup dvc
+| table dvc, count
+| iplocation dvc
+| sort count desc</query>
+          <earliest>$o365time.earliest$</earliest>
+          <latest>$o365time.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">row</option>
+        <format type="color" field="count">
+          <colorPalette type="minMidMax" maxColor="#1E93C6" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+        <drilldown>
+          <link target="_blank">search?q=index=ITS_O365 sourcetype="its:mcas" dvc="$click.value$"&amp;earliest=&amp;latest=</link>
+        </drilldown>
+      </table>
+    </panel>
+    <panel>
+      <title>its:mcas</title>
+      <map>
+        <title>IP Map</title>
+        <search base="o365_mcas">
+          <query>| geostats count</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="mapping.map.scrollZoom">0</option>
+        <option name="mapping.showTiles">1</option>
+        <option name="mapping.type">marker</option>
+        <option name="refresh.display">progressbar</option>
+      </map>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>365:service:message</title>
+      <table>
+        <title>Service Affected / 24hr</title>
+        <search id="o365_SMT">
+          <query>index=ITS_O365 sourcetype=o365:service:message
+| stats count by Title 
+| dedup Title
+| table Title, count
+| sort count desc</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">row</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">true</option>
+        <drilldown>
+          <link target="_blank">search?q=index=ITS_O365 sourcetype=o365:service:message Title="$click.value$"&amp;earliest=$o365time.earliest$&amp;latest=$o365time.latest$</link>
+        </drilldown>
+      </table>
+    </panel>
+    <panel>
+      <title>365:service:message</title>
+      <chart>
+        <title>Pie Breakdown / 24hr</title>
+        <search base="o365_SMT">
+          <query>| stats count by Title</query>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Top 20 Senders with Malware Alerts</title>
+        <search>
+          <query>sourcetype=its:mcas "EVENT_CATEGORY_MALWARE_DETECTED_IN_EMAIL" 
+| rex "account\s(?&lt;sender&gt;[^\s]+)" 
+| top 20 sender</query>
+          <earliest>$o365time.earliest$</earliest>
+          <latest>$o365time.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Top 20 Users Receiving Malware Infected Emails</title>
+        <search>
+          <query>sourcetype=its:mcas "EVENT_CATEGORY_MALWARE_DETECTED_IN_EMAIL" 
+| rex field=_raw "for user (?P&lt;suser_rex&gt;[^;]*)"
+| top 20 suser_rex</query>
+          <earliest>$o365time.earliest$</earliest>
+          <latest>$o365time.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+</form>
