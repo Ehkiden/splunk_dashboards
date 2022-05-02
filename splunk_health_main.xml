@@ -1,0 +1,302 @@
+<form>
+  <label>Splunk Health WIP</label>
+  <search id="app_list">
+    <query>
+      index=_internal sourcetype=splunk_web_access method=GET status=200 uri_path="/*/app/*" user!=cmon_user file!="*.*"
+      | rex field=uri_path "\/app\/(?&lt;app&gt;[^\/]+).*"
+      | dedup app
+      | table app
+    </query>
+    <earliest>$trange.earliest$</earliest>
+    <latest>$trange.latest$</latest>
+  </search>
+  <fieldset submitButton="false"></fieldset>
+  <row>
+    <panel>
+      <title>Lookup Table Size Test</title>
+      <table>
+        <search ref="Lookup Table Size"></search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>Longest Running Scheduled Searches | Last 7 days</title>
+        <search>
+          <query>( index=_internal sourcetype="scheduler" savedsearch_name=* run_time=* scheduled_time=* app=* user=* user!=nobody sid=* ) 
+OR ( ( index=sos OR index=os ) sourcetype="ps" ARGS="*search*" RSZ_KB=* id user )
+ | rex field=ARGS "search(_|\s)--id=(?&lt;sid&gt;[\_\-\w\.]+)(_|\s)--"
+ | rex field=ARGS "--user=(?&lt;user&gt;.+?)(_|\s)--" 
+ | stats
+    values(run_time) as run_time,
+    max(RSZ_KB) as RSZ_KB,
+    max(VSZ_KB) as VSZ_KB,
+    values(savedsearch_name) as savedsearch_name,
+    values(user) as user
+   by sid
+ | stats
+    sum(run_time) as sum_run_time,
+    max(run_time) as max_run_time,
+    max(RSZ_KB) as max_RSZ_KB
+   by savedsearch_name, user
+ | sort - max_run_time, max_RSZ_KB
+ | eval minute_threshold = 5
+ | where max_run_time&gt;(60*minute_threshold) OR sum_run_time&gt;(60*minute_threshold)
+ | join type=left user [
+  | rest /services/authentication/users
+  | fields + title, realname
+  | rename title as user ]
+ | eval max_run_time = tostring( max_run_time , "duration" )
+ | eval sum_run_time = tostring( sum_run_time , "duration" )
+ | eval max_RSZ_MB = round( max_RSZ_KB / pow( 1024 , 1 ), 2 )
+ | rename 
+    realname as Splunker,
+    savedsearch_name as "Saved Search/Report Name",
+    max_run_time as "Maximum Search Run Time",
+    sum_run_time as "Cumulative Search Run Time",
+    max_RSZ_MB AS "Peak Resident Memory Size (MB)"
+  | table Splunker, *Name, *Time, *Size*</query>
+          <earliest>-7d@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <input type="multiselect" token="indx_tok">
+        <label>Filter out</label>
+        <choice value="&quot;its_*&quot;, &quot;uk_*&quot;, &quot;ukaa_*&quot;">Campus</choice>
+        <choice value="&quot;ukhc_*&quot;">Healthcare</choice>
+        <choice value="&quot;_*&quot;, &quot;main&quot;, &quot;notable&quot;, &quot;aws_*&quot;, &quot;*_summary&quot;, &quot;lastchanceindex&quot;, &quot;risk&quot;, &quot;summary&quot;, &quot;cim_modactions&quot;">Internal</choice>
+        <choice value="&quot;&quot;">None</choice>
+        <prefix>NOT index IN (</prefix>
+        <suffix>)</suffix>
+        <delimiter> </delimiter>
+        <default>""""""</default>
+      </input>
+      <chart>
+        <title>Size on Disk by Index in GB</title>
+        <search>
+          <query>| dbinspect index=* 
+| search $indx_tok$
+| bin span=1d endEpoch
+| eval GB=sizeOnDiskMB/1024, _time=endEpoch
+| timechart sum(GB) by index usenull=false useother=false limit=55</query>
+          <earliest>-30d@d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">368</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Historical Concerent Searches</title>
+        <search>
+          <query>index=_internal sourcetype=splunkd source=*metrics.log group=search_concurrency user=* 
+| timechart avg(active_hist_searches) as "Historical Searches" by user useother=f limit=20</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <viz type="network-diagram-viz.network-diagram-viz">
+        <title>Splunk User Activity</title>
+        <search>
+          <query>index=_internal sourcetype=splunkd_ui_access "/app/" earliest=-24h@h
+| rex field=_raw "^[^-]+-\s+(?&lt;from&gt;(?!-)[^\s]+).+\/app\/(?&lt;to&gt;(?!-)[^\/ ]+)"
+| stats count by to, from
+| eval value="User " + from + " made " + count + " requests to app " + to, linktext = count, type="users"
+| append
+[ search index=_internal sourcetype=splunkd_ui_access "/app/" NOT "preview.png" earliest=-24h@h
+| rex field=_raw "/app/(?&lt;from&gt;(?!-)[^/ ]+)"
+| stats count by from
+| eval type="image", value="App: " + from
+| fields from, type, value]
+| eval color=case(0&lt;count AND count&lt;6, "green", 5&lt;count AND count&lt;16, "yellow", 15&lt;count, "red", true(), "blue")</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="height">641</option>
+        <option name="network-diagram-viz.network-diagram-viz.canZoom">true</option>
+        <option name="network-diagram-viz.network-diagram-viz.clusterBy">none</option>
+        <option name="network-diagram-viz.network-diagram-viz.defaultNodeType">circle</option>
+        <option name="network-diagram-viz.network-diagram-viz.draggableNodes">true</option>
+        <option name="network-diagram-viz.network-diagram-viz.enablePhysics">true</option>
+        <option name="network-diagram-viz.network-diagram-viz.hierarchy">false</option>
+        <option name="network-diagram-viz.network-diagram-viz.hierarchyDirection">Top-Down</option>
+        <option name="network-diagram-viz.network-diagram-viz.hierarchySortMethod">hubsize</option>
+        <option name="network-diagram-viz.network-diagram-viz.linkTextLocation">bottom</option>
+        <option name="network-diagram-viz.network-diagram-viz.linkTextSize">medium</option>
+        <option name="network-diagram-viz.network-diagram-viz.nodeTextSize">medium</option>
+        <option name="network-diagram-viz.network-diagram-viz.smoothEdges">true</option>
+        <option name="network-diagram-viz.network-diagram-viz.tokenNode">nd_node_token</option>
+        <option name="network-diagram-viz.network-diagram-viz.tokenToNode">nd_to_node_token</option>
+        <option name="network-diagram-viz.network-diagram-viz.tokenValue">nd_value_token</option>
+        <option name="refresh.display">progressbar</option>
+      </viz>
+    </panel>
+    <panel>
+      <viz type="network-diagram-viz.network-diagram-viz">
+        <title>Indexes and Hot Buckets</title>
+        <search>
+          <query>| dbinspect index=*
+| stats count by state, index
+| eval color=case(state=="hot", "red",state=="warm","yellow",state=="cold","blue"),
+value=state + " buckets: " + count, state = state + "(" + index + ")"
+| rename state as from, index as to, count as linktext
+| eval type="bucket"
+| table from, to, value, color,type, linktext
+| append
+[| eventcount summarize=false index=* index=_*
+| stats count as count by index
+| fields - count
+| rename index as from
+| eval to="splunk", value="Index: " + from, type="index", color="green"
+| table from, to, type, color,value]
+| append
+[| makeresults
+| eval from="splunk", type="indexer", value="Splunk Indexer"
+| fields from, type, value]</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="height">642</option>
+      </viz>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <input type="time" token="trange">
+        <label>Time Range</label>
+        <default>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </default>
+      </input>
+      <input type="multiselect" token="apps_tok">
+        <label>Apps</label>
+        <choice value="*">All Apps</choice>
+        <valuePrefix>"</valuePrefix>
+        <valueSuffix>"</valueSuffix>
+        <delimiter>, </delimiter>
+        <default>*</default>
+        <search base="app_list">
+          <query>search app=*</query>
+        </search>
+        <fieldForLabel>app</fieldForLabel>
+        <fieldForValue>app</fieldForValue>
+      </input>
+      <viz type="network-diagram-viz.network-diagram-viz">
+        <title>Page usage</title>
+        <search>
+          <query>index=_internal sourcetype=splunk_web_access method=GET status=200 uri_path="/*/app/*" user!=cmon_user file!="*.*" 
+| rex field=uri_path "\/app\/(?&lt;app&gt;[^\/]+).*" 
+| rename user as "from" file as "to"
+| search app IN ($apps_tok$)
+| stats count by to, from
+| eval value="User " + from + " made " + count + " requests to page " + to, linktext = count, type="users"
+| append
+    [ search index=_internal sourcetype=splunk_web_access method=GET status=200 uri_path="/*/app/*" user!=cmon_user file!="*.*"
+      | rex field=uri_path "\/app\/(?&lt;to&gt;[^\/]+).*" 
+      | rename file as "from"
+      | search to IN ($apps_tok$)
+    | stats count by to, from
+    | eval type="image", value="App: " + to + " Page: " + from
+    | fields to, from, type, value]
+
+| append
+    [ search index=_internal sourcetype=splunk_web_access method=GET status=200 uri_path="/*/app/*" user!=cmon_user file!="*.*"
+      | rex field=uri_path "\/app\/(?&lt;from&gt;[^\/]+).*" 
+      | search from IN ($apps_tok$)
+    | stats count by from
+    | eval type="app-store", value="App: " + from
+    | fields from, type, value]
+
+| eval color=case(0&lt;count AND count&lt;6, "green", 5&lt;count AND count&lt;16, "yellow", 15&lt;count, "red", true(), "blue")</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="height">583</option>
+        <option name="network-diagram-viz.network-diagram-viz.canZoom">true</option>
+        <option name="network-diagram-viz.network-diagram-viz.clusterBy">none</option>
+        <option name="network-diagram-viz.network-diagram-viz.defaultNodeType">circle</option>
+        <option name="network-diagram-viz.network-diagram-viz.draggableNodes">true</option>
+        <option name="network-diagram-viz.network-diagram-viz.enablePhysics">true</option>
+        <option name="network-diagram-viz.network-diagram-viz.hierarchy">true</option>
+        <option name="network-diagram-viz.network-diagram-viz.hierarchyDirection">Left-Right</option>
+        <option name="network-diagram-viz.network-diagram-viz.hierarchySortMethod">hubsize</option>
+        <option name="network-diagram-viz.network-diagram-viz.linkTextLocation">top</option>
+        <option name="network-diagram-viz.network-diagram-viz.linkTextSize">medium</option>
+        <option name="network-diagram-viz.network-diagram-viz.nodeTextSize">small</option>
+        <option name="network-diagram-viz.network-diagram-viz.smoothEdges">true</option>
+        <option name="network-diagram-viz.network-diagram-viz.tokenNode">nd_node_token</option>
+        <option name="network-diagram-viz.network-diagram-viz.tokenToNode">nd_to_node_token</option>
+        <option name="network-diagram-viz.network-diagram-viz.tokenValue">nd_value_token</option>
+        <option name="refresh.display">progressbar</option>
+      </viz>
+    </panel>
+    <panel>
+      <viz type="network-diagram-viz.network-diagram-viz">
+        <title>Data Ingest Distribution</title>
+        <search>
+          <query>index=_internal sourcetype=splunkd component=LicenseUsage type=Usage earliest=-24h@h latest=@h 
+| stats sum(b) as bytes by idx, st 
+| rename idx as from, st as to 
+| eval type="index", color="yellow" 
+| table from, to, bytes, type, color 
+| append 
+    [ search index=_internal sourcetype=splunkd component=LicenseUsage type=Usage earliest=-24h@h latest=@h 
+    | stats sum(b) as bytes by st 
+    | rename st as from 
+    | eval type="bucket", color="red" 
+    | table from, bytes, type, color] 
+| eval flowSize=case(round(bytes/1024/1024/1024/1024,3)&gt;=1, "TB", round(bytes/1024/1024/1024,3)&gt;=1, "GB", round(bytes/1024/1024,3)&gt;=1, "MB", round(bytes/1024,3)&gt;=1, "KB", true(), "B"),
+    flowSizeWeight=case(flowSize=="TB", 30, flowSize=="GB", 20, flowSize=="MB", 7, flowSize=="KB", 4, true(), 1),
+    flowConvert=case(flowSize=="TB", round(bytes/1024/1024/1024/1024,3), flowSize=="GB", round(bytes/1024/1024/1024,3), flowSize=="MB", round(bytes/1024/1024,3), flowSize=="KB", round(bytes/1024,3), true(), bytes),
+    value=case(type=="index", from." sent ".flowConvert.flowSize." to ".to, type=="bucket", from." recieved ".flowConvert.flowSize),
+    linktext=flowConvert.flowSize,
+    linkcolor=case(flowSize=="TB", "#780000", flowSize=="GB", "#dc0000", flowSize=="MB", "#fd8c00", flowSize=="KB", "#fdc500", true(), "#00ac46"),
+    linkwidth=(flowConvert/1024)*flowSizeWeight
+| table from, to, type, color, linkcolor, linktext, linkwidth, value</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="height">664</option>
+        <option name="network-diagram-viz.network-diagram-viz.canZoom">true</option>
+        <option name="network-diagram-viz.network-diagram-viz.clusterBy">none</option>
+        <option name="network-diagram-viz.network-diagram-viz.defaultNodeType">circle</option>
+        <option name="network-diagram-viz.network-diagram-viz.draggableNodes">true</option>
+        <option name="network-diagram-viz.network-diagram-viz.enablePhysics">true</option>
+        <option name="network-diagram-viz.network-diagram-viz.hierarchy">false</option>
+        <option name="network-diagram-viz.network-diagram-viz.hierarchyDirection">Top-Down</option>
+        <option name="network-diagram-viz.network-diagram-viz.hierarchySortMethod">directed</option>
+        <option name="network-diagram-viz.network-diagram-viz.linkTextLocation">top</option>
+        <option name="network-diagram-viz.network-diagram-viz.linkTextSize">small</option>
+        <option name="network-diagram-viz.network-diagram-viz.nodeTextSize">medium</option>
+        <option name="network-diagram-viz.network-diagram-viz.smoothEdges">true</option>
+        <option name="network-diagram-viz.network-diagram-viz.tokenNode">nd_node_token</option>
+        <option name="network-diagram-viz.network-diagram-viz.tokenToNode">nd_to_node_token</option>
+        <option name="network-diagram-viz.network-diagram-viz.tokenValue">nd_value_token</option>
+      </viz>
+    </panel>
+  </row>
+</form>
