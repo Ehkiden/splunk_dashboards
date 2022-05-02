@@ -1,0 +1,266 @@
+<form>
+  <label>ADFS Lockouts</label>
+  <description>Used to determine where user lockouts are occurring from and whats causing it. Also, can be used to determine if a user is being targeted.</description>
+  <fieldset submitButton="false">
+    <input type="time" token="trange">
+      <label>Time Range</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>User Lockouts</title>
+      <table>
+        <search>
+          <query>index="its_adfs"  EventCode IN (516) 
+| rex field=Message "(?&lt;reason&gt;.+)\s+Additional Data"
+| rex field=Message "Client IP:\s+(?&lt;client_ips&gt;[\.0-9,\s]+?)\s+nBad"
+| eval client_ip=split(client_ips, ",")
+| rex field=Message "User:\s+(?&lt;username&gt;[^\s]*)"
+| rex field=Message "Bad Password Count:\s+(?&lt;Bad_Password_Count&gt;\d+)"
+| rex field=Message "Last Bad Password Attempt:\s+(?&lt;Last_Bad_Password&gt;[^\s]+)"
+| mvexpand client_ip
+| iplocation client_ip
+| eval source_origin = if(like(client_ip, "128.163.%"), "internal", "external")
+
+| stats dc(client_ip) as unique_ips, sum(Bad_Password_Count) as tot_attempts, last(Last_Bad_Password) as last_bad_pass, count as event_notifications by username, source_origin
+| sort - tot_attempts, event_notifications
+| rename unique_ips as "Unique IPs", tot_attempts as "Total Bad Password Count", last_bad_pass as "Last Bad Password",</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">25</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <format type="color" field="tot_attempts">
+          <colorPalette type="minMidMax" maxColor="#DC4E41" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+        <format type="number" field="tot_attempts">
+          <option name="precision">0</option>
+        </format>
+        <format type="color" field="tot_attempts">
+          <colorPalette type="minMidMax" maxColor="#DC4E41" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+        <format type="number" field="tot_attempts">
+          <option name="precision">0</option>
+        </format>
+        <format type="color" field="unique_ips">
+          <colorPalette type="minMidMax" maxColor="#006D9C" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+        <format type="number" field="unique_ips">
+          <option name="precision">0</option>
+        </format>
+        <format type="color" field="tot_attempts">
+          <colorPalette type="minMidMax" maxColor="#DC4E41" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+        <format type="number" field="tot_attempts">
+          <option name="precision">0</option>
+        </format>
+        <format type="color" field="tot_attempts">
+          <colorPalette type="minMidMax" maxColor="#DC4E41" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+        <format type="number" field="tot_attempts">
+          <option name="precision">0</option>
+        </format>
+        <format type="color" field="unique_ips">
+          <colorPalette type="minMidMax" maxColor="#006D9C" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+        <format type="number" field="unique_ips">
+          <option name="precision">0</option>
+        </format>
+        <format type="color" field="event_notifications">
+          <colorPalette type="minMidMax" maxColor="#53A051" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+        <format type="number" field="event_notifications">
+          <option name="precision">0</option>
+        </format>
+      </table>
+    </panel>
+    <panel>
+      <viz type="leaflet_maps_app.maps-plus">
+        <title>Lockout Origins</title>
+        <search>
+          <query>index="its_adfs"  EventCode IN (516) 
+| rex field=Message "(?&lt;reason&gt;.+)\s+Additional Data"
+| rex field=Message "Client IP:\s+(?&lt;client_ips&gt;[\.0-9,\s]+?)\s+nBad"
+| eval client_ip=split(client_ips, ",")
+| rex field=Message "User:\s+(?&lt;username&gt;[^\s]*)"
+| rex field=Message "Bad Password Count:\s+(?&lt;Bad_Password_Count&gt;\d+)"
+| rex field=Message "Last Bad Password Attempt:\s+(?&lt;Last_Bad_Password&gt;[^\s]+)"
+| mvexpand client_ip
+| iplocation client_ip
+| eval source_origin = if(like(client_ip, "128.163.%"), "internal", "external")
+
+| stats sum(Bad_Password_Count) as tot_attempts, count by username, client_ip, City, Country, lat, lon
+| rename lat as latitude, lon as longitude
+| eval markerColor="red", icon=case(true(), "frown"),
+description="&lt;table align=\"center\" border=\"1\"&gt;
+    &lt;tr&gt;
+        &lt;th align=\"center\"&gt;User&lt;/th&gt;
+        &lt;th align=\"center\"&gt;Source IP&lt;/th&gt;
+        &lt;th align=\"center\"&gt;Event Notifications&lt;/th&gt;
+        &lt;th align=\"center\"&gt;Total Bad Password Attempts&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td align=\"center\"&gt;".username."&lt;/td&gt;
+        &lt;td align=\"center\"&gt;".client_ip."&lt;/td&gt;
+        &lt;td align=\"center\"&gt;".count."&lt;/td&gt;
+        &lt;td align=\"center\"&gt;".tot_attempts."&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;",
+tooltip=description
+| table latitude, longitude, client_ip, username, markerColor, icon, tooltip, description
+| where isnotnull(latitude)</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="height">817</option>
+        <option name="leaflet_maps_app.maps-plus.allPopups">0</option>
+        <option name="leaflet_maps_app.maps-plus.animate">1</option>
+        <option name="leaflet_maps_app.maps-plus.autoFitAndZoom">1</option>
+        <option name="leaflet_maps_app.maps-plus.autoFitAndZoomDelay">500</option>
+        <option name="leaflet_maps_app.maps-plus.bingMaps">0</option>
+        <option name="leaflet_maps_app.maps-plus.bingMapsLabelLanguage">en-US</option>
+        <option name="leaflet_maps_app.maps-plus.bingMapsTileLayer">CanvasLight</option>
+        <option name="leaflet_maps_app.maps-plus.cluster">1</option>
+        <option name="leaflet_maps_app.maps-plus.contextMenu">1</option>
+        <option name="leaflet_maps_app.maps-plus.criticalThreshold">80</option>
+        <option name="leaflet_maps_app.maps-plus.defaultHeight">600</option>
+        <option name="leaflet_maps_app.maps-plus.disableClusteringAtZoom">0</option>
+        <option name="leaflet_maps_app.maps-plus.drilldown">1</option>
+        <option name="leaflet_maps_app.maps-plus.drilldownAction">dblclick</option>
+        <option name="leaflet_maps_app.maps-plus.fullScreen">0</option>
+        <option name="leaflet_maps_app.maps-plus.googlePlacesPosition">topleft</option>
+        <option name="leaflet_maps_app.maps-plus.googlePlacesSearch">0</option>
+        <option name="leaflet_maps_app.maps-plus.googlePlacesZoomLevel">12</option>
+        <option name="leaflet_maps_app.maps-plus.heatmapBlur">15</option>
+        <option name="leaflet_maps_app.maps-plus.heatmapColorGradient">{"0.4":"blue","0.6":"cyan","0.7":"lime","0.8":"yellow","1":"red"}</option>
+        <option name="leaflet_maps_app.maps-plus.heatmapEnable">0</option>
+        <option name="leaflet_maps_app.maps-plus.heatmapMinOpacity">1.0</option>
+        <option name="leaflet_maps_app.maps-plus.heatmapOnly">0</option>
+        <option name="leaflet_maps_app.maps-plus.heatmapRadius">25</option>
+        <option name="leaflet_maps_app.maps-plus.i18nLanguage">en</option>
+        <option name="leaflet_maps_app.maps-plus.layerControl">1</option>
+        <option name="leaflet_maps_app.maps-plus.layerControlCollapsed">1</option>
+        <option name="leaflet_maps_app.maps-plus.mapCenterLat">39.50</option>
+        <option name="leaflet_maps_app.maps-plus.mapCenterLon">-98.35</option>
+        <option name="leaflet_maps_app.maps-plus.mapCenterZoom">6</option>
+        <option name="leaflet_maps_app.maps-plus.mapTile">http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png</option>
+        <option name="leaflet_maps_app.maps-plus.mapTileOverride">http://mt1.google.com/vt/lyrs=y&amp;x={x}&amp;y={y}&amp;z={z}</option>
+        <option name="leaflet_maps_app.maps-plus.maxClusterRadius">80</option>
+        <option name="leaflet_maps_app.maps-plus.maxSpiderfySize">100</option>
+        <option name="leaflet_maps_app.maps-plus.maxZoom">19</option>
+        <option name="leaflet_maps_app.maps-plus.measureActiveColor">#00ff00</option>
+        <option name="leaflet_maps_app.maps-plus.measureCompletedColor">#0066ff</option>
+        <option name="leaflet_maps_app.maps-plus.measureIconPosition">topright</option>
+        <option name="leaflet_maps_app.maps-plus.measureLocalization">en</option>
+        <option name="leaflet_maps_app.maps-plus.measurePrimaryAreaUnit">acres</option>
+        <option name="leaflet_maps_app.maps-plus.measurePrimaryLengthUnit">feet</option>
+        <option name="leaflet_maps_app.maps-plus.measureSecondaryAreaUnit">sqmiles</option>
+        <option name="leaflet_maps_app.maps-plus.measureSecondaryLengthUnit">miles</option>
+        <option name="leaflet_maps_app.maps-plus.measureTool">1</option>
+        <option name="leaflet_maps_app.maps-plus.minZoom">1</option>
+        <option name="leaflet_maps_app.maps-plus.multiplePopups">0</option>
+        <option name="leaflet_maps_app.maps-plus.pathColorList">#0003F0,#D43C29,darkgreen,0xe2d400,darkred,#23A378</option>
+        <option name="leaflet_maps_app.maps-plus.pathSplitInterval">60</option>
+        <option name="leaflet_maps_app.maps-plus.pathSplits">0</option>
+        <option name="leaflet_maps_app.maps-plus.permanentTooltip">0</option>
+        <option name="leaflet_maps_app.maps-plus.playbackSpeed">100</option>
+        <option name="leaflet_maps_app.maps-plus.playbackTickLength">50</option>
+        <option name="leaflet_maps_app.maps-plus.rangeOneBgColor">#B5E28C</option>
+        <option name="leaflet_maps_app.maps-plus.rangeOneFgColor">#6ECC39</option>
+        <option name="leaflet_maps_app.maps-plus.rangeThreeBgColor">#FD9C73</option>
+        <option name="leaflet_maps_app.maps-plus.rangeThreeFgColor">#F18017</option>
+        <option name="leaflet_maps_app.maps-plus.rangeTwoBgColor">#F1D357</option>
+        <option name="leaflet_maps_app.maps-plus.rangeTwoFgColor">#F0C20C</option>
+        <option name="leaflet_maps_app.maps-plus.refreshInterval">0</option>
+        <option name="leaflet_maps_app.maps-plus.renderer">svg</option>
+        <option name="leaflet_maps_app.maps-plus.scrollWheelZoom">1</option>
+        <option name="leaflet_maps_app.maps-plus.showPathLines">0</option>
+        <option name="leaflet_maps_app.maps-plus.showPlayback">0</option>
+        <option name="leaflet_maps_app.maps-plus.showPlaybackDateControl">1</option>
+        <option name="leaflet_maps_app.maps-plus.showPlaybackPlayControl">1</option>
+        <option name="leaflet_maps_app.maps-plus.showPlaybackSliderControl">1</option>
+        <option name="leaflet_maps_app.maps-plus.showProgress">1</option>
+        <option name="leaflet_maps_app.maps-plus.singleMarkerMode">0</option>
+        <option name="leaflet_maps_app.maps-plus.spiderfyDistanceMultiplier">1</option>
+        <option name="leaflet_maps_app.maps-plus.stickyTooltip">1</option>
+        <option name="leaflet_maps_app.maps-plus.warningThreshold">55</option>
+        <option name="refresh.display">progressbar</option>
+      </viz>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Bad Password Attempts for past 7 days</title>
+        <search>
+          <query>index="its_adfs"  EventCode IN (516) 
+| rex field=Message "(?&lt;reason&gt;.+)\s+Additional Data"
+| rex field=Message "Client IP:\s+(?&lt;client_ips&gt;[\.0-9,\s]+?)\s+nBad"
+| eval client_ip=split(client_ips, ",")
+| rex field=Message "User:\s+(?&lt;username&gt;[^\s]*)"
+| rex field=Message "Bad Password Count:\s+(?&lt;Bad_Password_Count&gt;\d+)"
+| rex field=Message "Last Bad Password Attempt:\s+(?&lt;Last_Bad_Password&gt;[^\s]+)"
+| timechart span=1h usenull=f useother=f  sum(Bad_Password_Count) as "Total Bad Password Count"</query>
+          <earliest>-7d@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-45</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.nullValueMode">zero</option>
+        <option name="charting.chart.showDataLabels">minmax</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">333</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Bad Password Attempts by Country</title>
+        <search>
+          <query>index="its_adfs"  EventCode IN (516) 
+| rex field=Message "(?&lt;reason&gt;.+)\s+Additional Data"
+| rex field=Message "Client IP:\s+(?&lt;client_ips&gt;[\.0-9,\s]+?)\s+nBad"
+| eval client_ip=split(client_ips, ",")
+| rex field=Message "User:\s+(?&lt;username&gt;[^\s]*)"
+| rex field=Message "Bad Password Count:\s+(?&lt;Bad_Password_Count&gt;\d+)"
+| rex field=Message "Last Bad Password Attempt:\s+(?&lt;Last_Bad_Password&gt;[^\s]+)"
+| mvexpand client_ip
+| iplocation client_ip
+
+| timechart span=1h usenull=f useother=f  sum(Bad_Password_Count) by Country</query>
+          <earliest>-7d@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.nullValueMode">zero</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">331</option>
+      </chart>
+    </panel>
+  </row>
+</form>
