@@ -1,0 +1,182 @@
+<form>
+  <label>ITS Desktops CPU Stats</label>
+  <fieldset submitButton="false">
+    <input type="time" token="trange">
+      <label>Time Range</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <chart>
+        <title>Avg User % Usage Over Time</title>
+        <search>
+          <query>index="its_desktops" sourcetype="PerfmonMk:CPU Load"
+| timechart avg(%_User_Time) as avg_user_per, avg(%_Processor_Time) as avg_processor_per, avg(%_Idle_Time) as avg_idle_per</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-45</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked100</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">357</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Avg User % Usage Over Time by Host</title>
+        <search>
+          <query>index="its_desktops" sourcetype="PerfmonMk:CPU Load"
+| timechart avg(%_User_Time) as avg_user_per by host</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-45</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">331</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Avg Processor % Usage Over Time by Host</title>
+        <search>
+          <query>index="its_desktops" sourcetype="PerfmonMk:CPU Load"
+| timechart avg(%_Processor_Time) as avg_processor_per by host</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-45</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="height">314</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Top Usage % by User</title>
+        <search>
+          <query>index="its_desktops" sourcetype="PerfmonMk:CPU Load"
+| join type=left host [ | search index=its_sccm sourcetype=client_inventory
+    | rename hostname as host
+    | fields host, UserName]
+| stats count by %_User_Time, host, UserName
+| sort - %_User_Time
+| dedup host
+| head 10
+| table UserName, host, %_User_Time</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="%_User_Time">
+          <colorPalette type="minMidMax" maxColor="#DC4E41" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>Top Avg Usage % by User</title>
+        <search>
+          <query>index="its_desktops" sourcetype="PerfmonMk:CPU Load"
+| join type=left host [ | search index=its_sccm sourcetype=client_inventory
+    | rename hostname as host
+    | fields host, UserName]
+
+| stats avg(%_User_Time) as avg_user_per by host, UserName
+| sort - avg_user_per
+| dedup host
+| head 10
+| table UserName, host, avg_user_per</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="avg_user_per">
+          <colorPalette type="minMidMax" maxColor="#006D9C" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+        <format type="color" field="%_User_Time">
+          <colorPalette type="minMidMax" maxColor="#006D9C" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Top Usage % by Processor</title>
+        <search>
+          <query>index="its_desktops" sourcetype="PerfmonMk:CPU Load"
+| join type=left host [ | search index=its_sccm sourcetype=client_inventory
+    | rename hostname as host
+    | fields host, UserName]
+
+| stats count by %_Processor_Time host, UserName
+| sort - %_Processor_Time
+| dedup host
+| head 10
+| table UserName, host, %_Processor_Time</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="%_Processor_Time">
+          <colorPalette type="minMidMax" maxColor="#CC33FF" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>Top Avg Usage % by Processor</title>
+        <search>
+          <query>index="its_desktops" sourcetype="PerfmonMk:CPU Load"
+| join type=left host [ | search index=its_sccm sourcetype=client_inventory
+    | rename hostname as host
+    | fields host, UserName]
+
+| stats avg(%_Processor_Time) as avg_Processor_per, by host, UserName
+| sort - avg_Processor_per
+| head 10
+| table UserName, host, avg_Processor_per</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="avg_Processor_per">
+          <colorPalette type="minMidMax" maxColor="#66FF66" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+      </table>
+    </panel>
+  </row>
+
+</form>
