@@ -1,0 +1,209 @@
+{
+	"visualizations": {
+		"viz_3dK1OSX9": {
+			"type": "splunk.table",
+			"options": {
+				"count": 20,
+				"showRowNumbers": true
+			},
+			"dataSources": {
+				"primary": "ds_kUSCKclI"
+			},
+			"title": "Public Teams Name and Description",
+			"description": "Exception List (Public Teams)"
+		},
+		"viz_5XwDwa8H": {
+			"type": "splunk.singlevalue",
+			"dataSources": {
+				"primary": "ds_VQg7Q4AP"
+			},
+			"title": "Public Teams Count"
+		},
+		"viz_47suP4Yt": {
+			"type": "splunk.table",
+			"dataSources": {
+				"primary": "ds_0OobDZW9"
+			},
+			"options": {
+				"count": 20
+			},
+			"title": "Public Team Creation Dates"
+		},
+		"viz_2pxCJlgk": {
+			"type": "viz.text",
+			"options": {
+				"content": "The data is updated daily at 2am. Please refer to the \"Last Scan Date\" field for determining if the team is still public. If \"Last Scan Date\" is the same as todays date, then the team is still public otherwise, its been made into a private team.",
+				"textColor": "#ffffff",
+				"fontWeight": "bold",
+				"fontSize": 20
+			}
+		},
+		"viz_C9lLRg0P": {
+			"type": "splunk.table",
+			"options": {},
+			"dataSources": {
+				"primary": "ds_kANNGbsZ"
+			}
+		},
+		"viz_TbrEFGzE": {
+			"type": "viz.text",
+			"options": {
+				"content": ""
+			}
+		}
+	},
+	"dataSources": {
+		"ds_kUSCKclI": {
+			"type": "ds.search",
+			"options": {
+				"query": "index=its_security sourcetype=\"ms_Teams_Settings\"\n| dedup id\n| eval created_unix=strptime(createdDateTime, \"%Y-%m-%dT%H:%M:%S.%Q\"),\ncreated_date=strftime(created_unix, \"%x\"), created_datetime=strftime(created_unix, \"%c\")\n| eval date=strftime(_time, \"%x\")\n| table date id displayName, description, created_date\n| sort - created_date\n| rename id as \"Group ID\", date as \"Last Scan Date\" created_date as \"Creation Date\""
+			},
+			"name": "ds_name_desc"
+		},
+		"ds_Uvoz3ojH": {
+			"type": "ds.search",
+			"options": {
+				"query": "index=its_security sourcetype=\"ms_Teams_Settings\"\n| dedup id\n| stats count by discoverySettings.showInTeamsSearchAndSuggestions"
+			},
+			"name": "ds_discoverable_teams_cnt"
+		},
+		"ds_StZDOcL8": {
+			"type": "ds.search",
+			"options": {
+				"query": "index=its_security sourcetype=\"ms_Teams_Settings\"\n| stats count by  specialization"
+			},
+			"name": "ds_specialization"
+		},
+		"ds_VQg7Q4AP": {
+			"type": "ds.search",
+			"options": {
+				"query": "index=its_security sourcetype=\"ms_Teams_Settings\" earliest=\"-1d@d\"\n| stats dc(id)"
+			},
+			"name": "ds_public_count"
+		},
+		"ds_0OobDZW9": {
+			"type": "ds.search",
+			"options": {
+				"query": "index=its_security sourcetype=\"ms_Teams_Settings\" \n| dedup id \n| eval created_unix=strptime(createdDateTime, \"%Y-%m-%dT%H:%M:%S\"), created_date=strftime(created_unix, \"%x\")\n| stats count by created_date\n| sort - created_date count\n| rename created_date as \"Creation Date\""
+			},
+			"name": "ds_creation_date"
+		},
+		"ds_0GGX0cTw": {
+			"type": "ds.search",
+			"options": {
+				"query": "| inputlookup Teams_PEL"
+			},
+			"name": "Public Teams Exception List"
+		},
+		"ds_kANNGbsZ": {
+			"type": "ds.search",
+			"options": {
+				"query": "| inputlookup Teams_PEL"
+			},
+			"name": "Public Teams Exception List"
+		},
+		"ds_1QSOfBTI_ds_kANNGbsZ": {
+			"type": "ds.search",
+			"options": {
+				"query": "| inputlookup Teams_PEL"
+			},
+			"name": "Copy of Public Teams Exception List"
+		}
+	},
+	"defaults": {
+		"dataSources": {
+			"ds.search": {
+				"options": {
+					"queryParameters": {
+						"latest": "$global_time.latest$",
+						"earliest": "$global_time.earliest$"
+					}
+				}
+			}
+		}
+	},
+	"inputs": {
+		"input_global_trp": {
+			"type": "input.timerange",
+			"options": {
+				"token": "global_time",
+				"defaultValue": "@d,now"
+			},
+			"title": "Global Time Range"
+		}
+	},
+	"layout": {
+		"type": "absolute",
+		"options": {
+			"height": 1100,
+			"width": 1500
+		},
+		"structure": [
+			{
+				"item": "viz_3dK1OSX9",
+				"type": "block",
+				"position": {
+					"x": 360,
+					"y": 90,
+					"w": 1050,
+					"h": 820
+				}
+			},
+			{
+				"item": "viz_5XwDwa8H",
+				"type": "block",
+				"position": {
+					"x": 0,
+					"y": 0,
+					"w": 350,
+					"h": 250
+				}
+			},
+			{
+				"item": "viz_47suP4Yt",
+				"type": "block",
+				"position": {
+					"x": 0,
+					"y": 260,
+					"w": 350,
+					"h": 650
+				}
+			},
+			{
+				"item": "viz_2pxCJlgk",
+				"type": "block",
+				"position": {
+					"x": 360,
+					"y": 0,
+					"w": 1050,
+					"h": 100
+				}
+			},
+			{
+				"item": "viz_C9lLRg0P",
+				"type": "block",
+				"position": {
+					"x": 350,
+					"y": 920,
+					"w": 1030,
+					"h": 210
+				}
+			},
+			{
+				"item": "viz_TbrEFGzE",
+				"type": "block",
+				"position": {
+					"x": 0,
+					"y": 910,
+					"w": 300,
+					"h": 50
+				}
+			}
+		],
+		"globalInputs": [
+			"input_global_trp"
+		]
+	},
+	"description": "",
+	"title": "Public MS Teams"
+}
