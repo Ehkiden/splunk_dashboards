@@ -1,0 +1,393 @@
+{
+	"visualizations": {
+		"viz_mDlFNwiV": {
+			"type": "viz.pie",
+			"dataSources": {
+				"primary": "ds_wKDFPvSe"
+			},
+			"title": "Application Alerts"
+		},
+		"viz_LJP4Uxxr": {
+			"type": "viz.pie",
+			"dataSources": {
+				"primary": "ds_8h0DvkMV"
+			},
+			"title": "Category Alerts"
+		},
+		"viz_iD8S8hYC": {
+			"type": "viz.pie",
+			"dataSources": {
+				"primary": "ds_ofgT9hk6"
+			},
+			"title": "Alert Severity"
+		},
+		"viz_WmrwPyxO": {
+			"type": "splunk.area",
+			"dataSources": {
+				"primary": "ds_5o3hyc4b"
+			},
+			"title": "Alert Activity Timeline",
+			"showProgressBar": false,
+			"showLastUpdated": false,
+			"options": {
+				"yAxisAbbreviation": "off",
+				"y2AxisAbbreviation": "off",
+				"showRoundedY2AxisLabels": false,
+				"legendTruncation": "ellipsisMiddle",
+				"showY2MajorGridLines": true,
+				"yAxisTitleText": "",
+				"xAxisTitleText": "Time"
+			}
+		},
+		"viz_DbfUCqmf": {
+			"type": "splunk.table",
+			"dataSources": {
+				"primary": "ds_tX6k5g5J"
+			},
+			"options": {
+				"tableFormat": {
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(tableAltRowBackgroundColorsByTheme)"
+				},
+				"showRowNumbers": true,
+				"columnFormat": {
+					"count": {
+						"data": "> table | seriesByName(\"count\") | formatByType(countColumnFormatEditorConfig)",
+						"rowColors": "> table | seriesByName('count') | pick(countRowColorsEditorConfig)",
+						"rowBackgroundColors": "> table | seriesByName(\"count\") | rangeValue(countRowBackgroundColorsEditorConfig)"
+					}
+				}
+			},
+			"title": "Top 10 Threats",
+			"context": {
+				"countColumnFormatEditorConfig": {
+					"number": {
+						"thousandSeparated": true,
+						"unitPosition": "after"
+					}
+				},
+				"countRowColorsEditorConfig": [
+					"#ffffff"
+				],
+				"countRowBackgroundColorsEditorConfig": [
+					{
+						"value": "#118832",
+						"to": 10
+					},
+					{
+						"value": "#669922",
+						"from": 10,
+						"to": 25
+					},
+					{
+						"value": "#CBA700",
+						"from": 25,
+						"to": 50
+					},
+					{
+						"value": "#D94E17",
+						"from": 50,
+						"to": 100
+					},
+					{
+						"value": "#D41F1F",
+						"from": 100
+					}
+				]
+			}
+		},
+		"viz_9PzPzbw1": {
+			"type": "splunk.bar",
+			"dataSources": {
+				"primary": "ds_ctDtUdcZ"
+			},
+			"title": "Top 10 Internal Source IPs",
+			"eventHandlers": [
+				{
+					"type": "drilldown.customUrl",
+					"options": {
+						"url": "/app/ITS-security/sw_ip_lookup?form.ip_tok=$row.src_ip.value$",
+						"newTab": true
+					}
+				}
+			],
+			"context": {},
+			"showProgressBar": false,
+			"showLastUpdated": false,
+			"options": {
+				"yAxisAbbreviation": "off",
+				"y2AxisAbbreviation": "off",
+				"showRoundedY2AxisLabels": false,
+				"legendTruncation": "ellipsisMiddle",
+				"showY2MajorGridLines": true,
+				"legendDisplay": "off",
+				"yAxisTitleText": "Threats",
+				"xAxisTitleText": "Source IP"
+			}
+		},
+		"viz_OuSzrh0r": {
+			"type": "splunk.bar",
+			"dataSources": {
+				"primary": "ds_6Weju7EE"
+			},
+			"title": "Top 10 External Source IPs",
+			"eventHandlers": [
+				{
+					"type": "drilldown.customUrl",
+					"options": {
+						"url": "/app/ITS-security/sw_ip_lookup?form.ip_tok=$row.src_ip.value$",
+						"newTab": true
+					}
+				}
+			],
+			"context": {},
+			"showProgressBar": false,
+			"showLastUpdated": false,
+			"options": {
+				"yAxisAbbreviation": "off",
+				"y2AxisAbbreviation": "off",
+				"showRoundedY2AxisLabels": false,
+				"legendTruncation": "ellipsisMiddle",
+				"showY2MajorGridLines": true,
+				"legendDisplay": "off",
+				"yAxisTitleText": "Threats",
+				"xAxisTitleText": "Source IP"
+			}
+		}
+	},
+	"dataSources": {
+		"ds_wKDFPvSe": {
+			"type": "ds.search",
+			"options": {
+				"query": "index=its_network_sec_fw sourcetype=pan:threat src!=0.0.0.0 \n| lookup safe_ips.csv ip_addr as src_ip OUTPUT comment as comment\n| where isnull(comment)\n| stats count by app\n| sort count desc"
+			},
+			"name": "Application Alerts"
+		},
+		"ds_8h0DvkMV": {
+			"type": "ds.search",
+			"options": {
+				"query": "index=its_network_sec_fw sourcetype=pan:threat app=\"$ms_app_tok$\" \n| lookup safe_ips.csv ip_addr as src_ip OUTPUT comment as comment\n| where isnull(comment)\n| stats count by category\n| sort count desc"
+			},
+			"name": "category_list"
+		},
+		"ds_ofgT9hk6": {
+			"type": "ds.search",
+			"options": {
+				"query": "index=its_network_sec_fw sourcetype=pan:threat app=\"$ms_app_tok$\" category=\"$ms_cat_tok$\"\n| lookup safe_ips.csv ip_addr as src_ip OUTPUT comment as comment\n| where isnull(comment)\n| stats count by severity"
+			},
+			"name": "severity_list"
+		},
+		"ds_5o3hyc4b": {
+			"type": "ds.search",
+			"options": {
+				"query": "index=its_network_sec_fw sourcetype=pan:threat app=\"$ms_app_tok$\" category=\"$ms_cat_tok$\" severity IN ($ms_sev_tok$)\n| lookup safe_ips.csv ip_addr as src_ip OUTPUT comment as comment\n| where isnull(comment)\n| timechart span=10m count by app"
+			},
+			"name": "Threat Activity"
+		},
+		"ds_MXyjrpop": {
+			"type": "ds.chain",
+			"options": {
+				"extend": "ds_5o3hyc4b",
+				"query": "| timechart span=10m count by app"
+			},
+			"name": "activity_timeline"
+		},
+		"ds_M5TrKUe9": {
+			"type": "ds.chain",
+			"options": {
+				"query": "| lookup pa_zones.csv Zones as src_zone OUTPUT Origin\n| search Origin=\"internal\" \n| top 10 threat",
+				"extend": "ds_5o3hyc4b"
+			},
+			"name": "top_threats"
+		},
+		"ds_tX6k5g5J": {
+			"type": "ds.search",
+			"options": {
+				"query": "index=its_network_sec_fw sourcetype=pan:threat app=\"$ms_app_tok$\" category=\"$ms_cat_tok$\" severity IN ($ms_sev_tok$) src!=0.0.0.0\n| lookup safe_ips.csv ip_addr as src_ip OUTPUT comment as comment\n| where isnull(comment)\n| lookup pa_zones.csv Zones as src_zone OUTPUT Origin\n| search Origin=\"internal\" \n| top 10 threat, app, category, severity\n| fields - _tc\n| eval percent=round(percent, 2)"
+			},
+			"name": "top_threats"
+		},
+		"ds_0q0aadmI": {
+			"type": "ds.search",
+			"options": {
+				"query": "index=its_network_sec_fw sourcetype=pan:threat app=\"$ms_app_tok$\" category=\"$ms_cat_tok$\" severity IN ($ms_sev_tok$) src!=0.0.0.0\n| lookup safe_ips.csv ip_addr as src_ip OUTPUT comment as comment\n| where isnull(comment)\n| lookup pa_zones.csv Zones as src_zone OUTPUT Origin\n| table src_ip, Origin, severity"
+			},
+			"name": "top10_base"
+		},
+		"ds_6Weju7EE": {
+			"type": "ds.chain",
+			"options": {
+				"extend": "ds_0q0aadmI",
+				"query": "| search Origin=\"external\" \n| top 10 src_ip\n| fields - percent"
+			},
+			"name": "top10_external"
+		},
+		"ds_ctDtUdcZ": {
+			"type": "ds.chain",
+			"options": {
+				"extend": "ds_0q0aadmI",
+				"query": "| search Origin=\"internal\" \n| top 10 src_ip severity\n| fields - percent"
+			},
+			"name": "top10_internal"
+		}
+	},
+	"defaults": {
+		"dataSources": {
+			"ds.search": {
+				"options": {
+					"queryParameters": {
+						"latest": "$global_time.latest$",
+						"earliest": "$global_time.earliest$"
+					}
+				}
+			}
+		}
+	},
+	"inputs": {
+		"input_global_trp": {
+			"type": "input.timerange",
+			"options": {
+				"token": "global_time",
+				"defaultValue": "-12h@h,now"
+			},
+			"title": "Global Time Range"
+		},
+		"input_3OSQG6L5": {
+			"options": {
+				"items": [
+					{
+						"label": "All",
+						"value": "*"
+					}
+				],
+				"defaultValue": "*",
+				"token": "ms_app_tok"
+			},
+			"dataSources": {
+				"primary": "ds_wKDFPvSe"
+			},
+			"title": "App Dropdown",
+			"type": "input.dropdown"
+		},
+		"input_HEXVlIV9": {
+			"options": {
+				"items": [
+					{
+						"label": "All",
+						"value": "*"
+					}
+				],
+				"defaultValue": "*",
+				"token": "ms_cat_tok"
+			},
+			"dataSources": {
+				"primary": "ds_8h0DvkMV"
+			},
+			"title": "Category Dropdown",
+			"type": "input.dropdown"
+		},
+		"input_Bwc27X2z": {
+			"options": {
+				"items": [
+					{
+						"label": "All",
+						"value": "*"
+					}
+				],
+				"defaultValue": "*",
+				"token": "ms_sev_tok"
+			},
+			"dataSources": {
+				"primary": "ds_ofgT9hk6"
+			},
+			"title": "Severity Multiselect",
+			"type": "input.multiselect"
+		}
+	},
+	"layout": {
+		"type": "absolute",
+		"options": {
+			"width": 2020,
+			"height": 700
+		},
+		"structure": [
+			{
+				"item": "viz_mDlFNwiV",
+				"type": "block",
+				"position": {
+					"x": 0,
+					"y": 0,
+					"w": 400,
+					"h": 235
+				}
+			},
+			{
+				"item": "viz_DbfUCqmf",
+				"type": "block",
+				"position": {
+					"x": 1220,
+					"y": 0,
+					"w": 800,
+					"h": 390
+				}
+			},
+			{
+				"item": "viz_WmrwPyxO",
+				"type": "block",
+				"position": {
+					"x": 410,
+					"y": 0,
+					"w": 800,
+					"h": 390
+				}
+			},
+			{
+				"item": "viz_9PzPzbw1",
+				"type": "block",
+				"position": {
+					"x": 410,
+					"y": 400,
+					"w": 800,
+					"h": 300
+				}
+			},
+			{
+				"item": "viz_LJP4Uxxr",
+				"type": "block",
+				"position": {
+					"x": 0,
+					"y": 230,
+					"w": 400,
+					"h": 235
+				}
+			},
+			{
+				"item": "viz_OuSzrh0r",
+				"type": "block",
+				"position": {
+					"x": 1220,
+					"y": 400,
+					"w": 800,
+					"h": 300
+				}
+			},
+			{
+				"item": "viz_iD8S8hYC",
+				"type": "block",
+				"position": {
+					"x": 0,
+					"y": 460,
+					"w": 400,
+					"h": 240
+				}
+			}
+		],
+		"globalInputs": [
+			"input_global_trp",
+			"input_3OSQG6L5",
+			"input_HEXVlIV9",
+			"input_Bwc27X2z"
+		]
+	},
+	"description": "Note: The dropdown options are sorted by alert count.",
+	"title": "Palo Alto: Alert Details | DB Studios"
+}
