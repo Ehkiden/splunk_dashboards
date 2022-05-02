@@ -1,0 +1,647 @@
+<dashboard theme="dark">
+  <label>ITS Enterprise Security Overview</label>
+  <row>
+    <panel>
+      <viz type="carousel-viz.carousel-viz">
+        <title>Palo Alto: Critical and High Allowed</title>
+        <search>
+          <query>index=summary source="PA_Daily_Status" 
+| eval total=if(!isnull(count), count, total)
+| timechart span=1d sum(crit:allow) as crit, sum(high:allow) as high
+| fillnull value=0
+| eval tot='crit'+'high'
+| fields _time, tot
+| timewrap d
+| addcoltotals labelfield="_time" label="test"
+| search _time=test
+| transpose
+| where !isnull("row 1")
+| search "row 1"!="test"
+| rename "row 1" as value
+| rex field=column "tot_(?&lt;day&gt;\d{1,2})"
+| eval day=if(column="tot_latest_day", 0, day)
+| sort + day
+| eval tot_curr_day=(if(day=1, value, 0)), tot_last_day=(if(day=2, value, 0)),
+        tot_curr_week=(if(day&gt;=0 AND day&lt;=6, value, 0)), tot_last_week=(if(day&gt;=7 AND day&lt;=13, value, 0)),
+        tot_curr_month=(if(day&gt;=0 AND day&lt;=29, value, 0)), tot_last_month=(if(day&gt;=30 AND day&lt;=59, value, 0))
+| addcoltotals labelfield="column" label="test"
+| search column=test
+| table tot_curr_*, tot_last_*
+| transpose column_name=caption
+| rename "row 1" as value
+| eval time=case(like(caption, "%day"), "Day", like(caption, "%week"), "Week", like(caption, "%month"), "Month"), caption=substr(caption, 1, 8)
+| chart values(value) over time by caption
+| eval diff=tot_curr-tot_last, range=case(diff&gt;0, "red", diff&lt;0, "green", true(), "amber"), tot_last=tostring(tot_last, "commas"), caption="Previous "+time+": "+tot_last, value=tot_curr, unit=time+" Total"
+| eval time_sort=case(time="Day", 1, time="Week", 2, time="Month", 3)
+| sort + time_sort
+| append [ search index=summary source="PA_Daily_Status" src_zone="inside"
+    | eval total=if(!isnull(count), count, total)
+    | timechart span=1d sum(crit:allow) as crit, sum(high:allow) as high
+    | fillnull value=0
+    | eval tot='crit'+'high'
+    | fields _time, tot
+    | timewrap d
+    | addcoltotals labelfield="_time" label="test"
+    | search _time=test
+    | transpose
+    | where !isnull("row 1")
+    | search "row 1"!="test"
+    | rename "row 1" as value
+    | rex field=column "tot_(?&lt;day&gt;\d{1,2})"
+    | eval day=if(column="tot_latest_day", 0, day)
+    | sort + day
+    | eval tot_curr_day=(if(day=1, value, 0)), tot_last_day=(if(day=2, value, 0)),
+            tot_curr_week=(if(day&gt;=0 AND day&lt;=6, value, 0)), tot_last_week=(if(day&gt;=7 AND day&lt;=13, value, 0)),
+            tot_curr_month=(if(day&gt;=0 AND day&lt;=29, value, 0)), tot_last_month=(if(day&gt;=30 AND day&lt;=59, value, 0))
+    | addcoltotals labelfield="column" label="test"
+    | search column=test
+    | table tot_curr_*, tot_last_*
+    | transpose column_name=caption
+    | rename "row 1" as value
+    | eval time=case(like(caption, "%day"), "Day", like(caption, "%week"), "Week", like(caption, "%month"), "Month"), caption=substr(caption, 1, 8)
+    | chart values(value) over time by caption
+    | eval diff=tot_curr-tot_last, range=case(diff&gt;0, "red", diff&lt;0, "green", true(), "amber"), tot_last=tostring(tot_last, "commas"), caption="Previous "+time+": "+tot_last, value=tot_curr, unit=time+" Internal"
+    | eval time_sort=case(time="Day", 1, time="Week", 2, time="Month", 3)
+    | sort + time_sort]
+        | append [ search index=summary source="PA_Daily_Status" src_zone="outside"
+        | eval total=if(!isnull(count), count, total)
+        | timechart span=1d sum(crit:allow) as crit, sum(high:allow) as high
+        | fillnull value=0
+        | eval tot='crit'+'high'
+        | fields _time, tot
+        | timewrap d
+        | addcoltotals labelfield="_time" label="test"
+        | search _time=test
+        | transpose
+        | where !isnull("row 1")
+        | search "row 1"!="test"
+        | rename "row 1" as value
+        | rex field=column "tot_(?&lt;day&gt;\d{1,2})"
+        | eval day=if(column="tot_latest_day", 0, day)
+        | sort + day
+        | eval tot_curr_day=(if(day=1, value, 0)), tot_last_day=(if(day=2, value, 0)),
+                tot_curr_week=(if(day&gt;=0 AND day&lt;=6, value, 0)), tot_last_week=(if(day&gt;=7 AND day&lt;=13, value, 0)),
+                tot_curr_month=(if(day&gt;=0 AND day&lt;=29, value, 0)), tot_last_month=(if(day&gt;=30 AND day&lt;=59, value, 0))
+        | addcoltotals labelfield="column" label="test"
+        | search column=test
+        | table tot_curr_*, tot_last_*
+        | transpose column_name=caption
+        | rename "row 1" as value
+        | eval time=case(like(caption, "%day"), "Day", like(caption, "%week"), "Week", like(caption, "%month"), "Month"), caption=substr(caption, 1, 8)
+        | chart values(value) over time by caption
+        | eval diff=tot_curr-tot_last, range=case(diff&gt;0, "red", diff&lt;0, "green", true(), "amber"), tot_last=tostring(tot_last, "commas"), caption="Previous "+time+": "+tot_last, value=tot_curr, unit=time+" External"
+        | eval time_sort=case(time="Day", 1, time="Week", 2, time="Month", 3)
+        | sort + time_sort]</query>
+          <earliest>-2mon@mon</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="carousel-viz.carousel-viz.autoplay">true</option>
+        <option name="carousel-viz.carousel-viz.autoplaySpeed">slow</option>
+        <option name="carousel-viz.carousel-viz.colorMode">background</option>
+        <option name="carousel-viz.carousel-viz.direction">left</option>
+        <option name="carousel-viz.carousel-viz.forceAllCaps">true</option>
+        <option name="carousel-viz.carousel-viz.numDecimalPlaces">0</option>
+        <option name="carousel-viz.carousel-viz.orientation">horizontal</option>
+        <option name="carousel-viz.carousel-viz.showDots">false</option>
+        <option name="carousel-viz.carousel-viz.size">automatic</option>
+        <option name="carousel-viz.carousel-viz.slidesToScroll">3</option>
+        <option name="carousel-viz.carousel-viz.slidesToShow">3</option>
+        <option name="carousel-viz.carousel-viz.thousandsSeparator">true</option>
+        <option name="carousel-viz.carousel-viz.tokenCaption">cv_caption</option>
+        <option name="carousel-viz.carousel-viz.tokenFormattedValue">cv_formatted_value</option>
+        <option name="carousel-viz.carousel-viz.tokenRawValue">cv_raw_value</option>
+        <option name="carousel-viz.carousel-viz.tokenUnit">cv_unit</option>
+        <option name="carousel-viz.carousel-viz.unitPosition">after</option>
+        <option name="drilldown">none</option>
+        <option name="height">172</option>
+        <option name="refresh.display">progressbar</option>
+      </viz>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <viz type="carousel-viz.carousel-viz">
+        <title>Palo Alto: Critical and High Blocked</title>
+        <search>
+          <query>index=summary source="PA_Daily_Status" 
+| eval total=if(!isnull(count), count, total)
+| timechart span=1d sum(crit:block) as crit:block, sum(high:block) as high:block
+| fillnull value=0
+| eval tot='crit:block'+'high:block'
+| fields _time, tot
+| timewrap d
+| addcoltotals labelfield="_time" label="test"
+| search _time=test
+| transpose
+| where !isnull("row 1")
+| search "row 1"!="test"
+| rename "row 1" as value
+| rex field=column "tot_(?&lt;day&gt;\d{1,2})"
+| eval day=if(column="tot_latest_day", 0, day)
+| sort + day
+| eval tot_curr_day=(if(day=1, value, 0)), tot_last_day=(if(day=2, value, 0)),
+        tot_curr_week=(if(day&gt;=0 AND day&lt;=6, value, 0)), tot_last_week=(if(day&gt;=7 AND day&lt;=13, value, 0)),
+        tot_curr_month=(if(day&gt;=0 AND day&lt;=29, value, 0)), tot_last_month=(if(day&gt;=30 AND day&lt;=59, value, 0))
+| addcoltotals labelfield="column" label="test"
+| search column=test
+| table tot_curr_*, tot_last_*
+| transpose column_name=caption
+| rename "row 1" as value
+| eval time=case(like(caption, "%day"), "Day", like(caption, "%week"), "Week", like(caption, "%month"), "Month"), caption=substr(caption, 1, 8)
+| chart values(value) over time by caption
+| eval diff=tot_curr-tot_last, range=case(diff&gt;0, "red", diff&lt;0, "green", true(), "amber"), tot_last=tostring(tot_last, "commas"), caption="Previous "+time+": "+tot_last, value=tot_curr, unit=time+" Total"
+| eval time_sort=case(time="Day", 1, time="Week", 2, time="Month", 3)
+| sort + time_sort
+| append [ search index=summary source="PA_Daily_Status" src_zone="inside"
+    | eval total=if(!isnull(count), count, total)
+    | timechart span=1d sum(crit:block) as crit:block, sum(high:block) as high:block
+    | fillnull value=0
+    | eval tot='crit:block'+'high:block'
+    | fields _time, tot
+    | timewrap d
+    | addcoltotals labelfield="_time" label="test"
+    | search _time=test
+    | transpose
+    | where !isnull("row 1")
+    | search "row 1"!="test"
+    | rename "row 1" as value
+    | rex field=column "tot_(?&lt;day&gt;\d{1,2})"
+    | eval day=if(column="tot_latest_day", 0, day)
+    | sort + day
+    | eval tot_curr_day=(if(day=1, value, 0)), tot_last_day=(if(day=2, value, 0)),
+            tot_curr_week=(if(day&gt;=0 AND day&lt;=6, value, 0)), tot_last_week=(if(day&gt;=7 AND day&lt;=13, value, 0)),
+            tot_curr_month=(if(day&gt;=0 AND day&lt;=29, value, 0)), tot_last_month=(if(day&gt;=30 AND day&lt;=59, value, 0))
+    | addcoltotals labelfield="column" label="test"
+    | search column=test
+    | table tot_curr_*, tot_last_*
+    | transpose column_name=caption
+    | rename "row 1" as value
+    | eval time=case(like(caption, "%day"), "Day", like(caption, "%week"), "Week", like(caption, "%month"), "Month"), caption=substr(caption, 1, 8)
+    | chart values(value) over time by caption
+    | eval diff=tot_curr-tot_last, range=case(diff&gt;0, "red", diff&lt;0, "green", true(), "amber"), tot_last=tostring(tot_last, "commas"), caption="Previous "+time+": "+tot_last, value=tot_curr, unit=time+" Internal"
+    | eval time_sort=case(time="Day", 1, time="Week", 2, time="Month", 3)
+    | sort + time_sort]
+        | append [ search index=summary source="PA_Daily_Status" src_zone="outside"
+        | eval total=if(!isnull(count), count, total)
+        | timechart span=1d sum(crit:block) as crit:block, sum(high:block) as high:block
+        | fillnull value=0
+        | eval tot='crit:block'+'high:block'
+        | fields _time, tot
+        | timewrap d
+        | addcoltotals labelfield="_time" label="test"
+        | search _time=test
+        | transpose
+        | where !isnull("row 1")
+        | search "row 1"!="test"
+        | rename "row 1" as value
+        | rex field=column "tot_(?&lt;day&gt;\d{1,2})"
+        | eval day=if(column="tot_latest_day", 0, day)
+        | sort + day
+        | eval tot_curr_day=(if(day=1, value, 0)), tot_last_day=(if(day=2, value, 0)),
+                tot_curr_week=(if(day&gt;=0 AND day&lt;=6, value, 0)), tot_last_week=(if(day&gt;=7 AND day&lt;=13, value, 0)),
+                tot_curr_month=(if(day&gt;=0 AND day&lt;=29, value, 0)), tot_last_month=(if(day&gt;=30 AND day&lt;=59, value, 0))
+        | addcoltotals labelfield="column" label="test"
+        | search column=test
+        | table tot_curr_*, tot_last_*
+        | transpose column_name=caption
+        | rename "row 1" as value
+        | eval time=case(like(caption, "%day"), "Day", like(caption, "%week"), "Week", like(caption, "%month"), "Month"), caption=substr(caption, 1, 8)
+        | chart values(value) over time by caption
+        | eval diff=tot_curr-tot_last, range=case(diff&gt;0, "red", diff&lt;0, "green", true(), "amber"), tot_last=tostring(tot_last, "commas"), caption="Previous "+time+": "+tot_last, value=tot_curr, unit=time+" External"
+        | eval time_sort=case(time="Day", 1, time="Week", 2, time="Month", 3)
+        | sort + time_sort]</query>
+          <earliest>-2mon@mon</earliest>
+          <latest>now</latest>
+          <progress>
+            <unset token="NOOP_1"></unset>
+          </progress>
+          <done>
+            <set token="NOOP_1">noop</set>
+          </done>
+        </search>
+        <option name="carousel-viz.carousel-viz.autoplay">true</option>
+        <option name="carousel-viz.carousel-viz.autoplaySpeed">slow</option>
+        <option name="carousel-viz.carousel-viz.colorMode">background</option>
+        <option name="carousel-viz.carousel-viz.direction">left</option>
+        <option name="carousel-viz.carousel-viz.forceAllCaps">true</option>
+        <option name="carousel-viz.carousel-viz.numDecimalPlaces">0</option>
+        <option name="carousel-viz.carousel-viz.orientation">horizontal</option>
+        <option name="carousel-viz.carousel-viz.showDots">false</option>
+        <option name="carousel-viz.carousel-viz.size">automatic</option>
+        <option name="carousel-viz.carousel-viz.slidesToScroll">3</option>
+        <option name="carousel-viz.carousel-viz.slidesToShow">3</option>
+        <option name="carousel-viz.carousel-viz.thousandsSeparator">true</option>
+        <option name="carousel-viz.carousel-viz.tokenCaption">cv_caption</option>
+        <option name="carousel-viz.carousel-viz.tokenFormattedValue">cv_formatted_value</option>
+        <option name="carousel-viz.carousel-viz.tokenRawValue">cv_raw_value</option>
+        <option name="carousel-viz.carousel-viz.tokenUnit">cv_unit</option>
+        <option name="carousel-viz.carousel-viz.unitPosition">after</option>
+        <option name="drilldown">none</option>
+        <option name="height">173</option>
+      </viz>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Palo Alto</title>
+      <html depends="$alwaysHideCSSForTrellis$">
+         <style>
+           .facets-container .viz-facet {
+               height: 320px !important;
+               width: 900px !important;
+               float: left;
+               padding: 10px 0px 0px 0px;
+           }        
+         </style>
+       </html>
+      <chart>
+        <title>Time Chart of Inbound Application Alerts for the past 12 hours(Critical &amp; High)</title>
+        <search>
+          <query>index=its_network_sec_fw sourcetype=pan:threat (severity="critical" OR severity="high") 
+| lookup safe_ips.csv ip_addr as src_ip OUTPUT comment as comment
+| where isnull(comment)
+| lookup pa_zones.csv Zones as src_zone OUTPUT Origin 
+| search Origin="external" 
+| timechart count by app useother=f
+| $NOOP_1$</query>
+          <earliest>-12h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.chart">area</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="height">328</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">0</option>
+        <option name="trellis.size">large</option>
+        <option name="trellis.splitBy">_aggregation</option>
+        <drilldown>
+          <link target="_blank">/app/ITS-security/pa_alert_details?form.ms_app_tok=$click.name2$&amp;form.global_time.earliest=$earliest$&amp;form.global_time.latest=$latest$</link>
+        </drilldown>
+      </chart>
+    </panel>
+    <panel>
+      <title>Palo Alto</title>
+      <html depends="$alwaysHideCSSForTrellis$">
+         <style>
+           .facets-container .viz-facet {
+               height: 320px !important;
+               width: 900px !important;
+               float: left;
+               padding: 10px 0px 0px 0px;
+           }        
+         </style>
+        </html>
+      <chart>
+        <title>Time Chart of Outbound Application Alerts for the past 12 hours(Critical &amp; High) | Including VPN Users</title>
+        <search>
+          <query>index=its_network_sec_fw sourcetype=pan:threat severity IN ("critical" "high") NOT(app IN (azure-log-analytics)) threat!="SMB: User Password Brute Force Attempt(40004)"
+| lookup safe_ips.csv ip_addr as src_ip OUTPUT comment as comment
+| where isnull(comment)
+| lookup pa_zones.csv Zones as src_zone OUTPUT Origin 
+| search Origin="internal" 
+| timechart count by app useother=f
+| $NOOP_1$</query>
+          <earliest>-12h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.chart">area</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="height">322</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">0</option>
+        <option name="trellis.size">large</option>
+        <option name="trellis.splitBy">_aggregation</option>
+        <drilldown>
+          <link target="_blank">/app/ITS-security/pa_alert_details?form.ms_app_tok=$click.name2$&amp;form.global_time.earliest=$earliest$&amp;form.global_time.latest=$latest$</link>
+        </drilldown>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Palo Alto</title>
+      <chart>
+        <title>Top Attacking IP With High or Critical Severity | Week to Date</title>
+        <search>
+          <query>index=summary source=PA_Detailed_Daily_Report severity IN ("critical", "high")
+| top 10 src_ip</query>
+          <earliest>@w0</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.axisTitleX.text">Source IP</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.chart">bar</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <link target="_blank">/app/ITS-security/sw_ip_lookup?form.ip_tok=$click.value$</link>
+        </drilldown>
+      </chart>
+    </panel>
+    <panel>
+      <title>Palo Alto</title>
+      <chart>
+        <title>Top Target IP With High or Critical Severity | Week to Date</title>
+        <search>
+          <query>index=summary source=PA_Detailed_Daily_Report severity IN ("critical", "high")
+| lookup safe_ips.csv ip_addr as src_ip OUTPUT comment as comment
+| where isnull(comment)
+| top 10 dest_ip</query>
+          <earliest>@w0</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.axisTitleX.text">Destination IP</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.chart">bar</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <link target="_blank">/app/ITS-security/sw_ip_lookup?form.ip_tok=$click.value$</link>
+        </drilldown>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Security Team Service Now for the Past Two Months</title>
+      <single>
+        <title>Service Now Tickets Created | 7 Day Comparison</title>
+        <search>
+          <query>index=its_snow assignment_group_name="Security Team" 
+| dedup sys_id
+| timechart span=7d count</query>
+          <earliest>-2mon@mon</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x65a637","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,1,2]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="useColors">1</option>
+      </single>
+      <single>
+        <title>Average Age of All Tickets in Days | 7 Day Comparison</title>
+        <search>
+          <query>index=its_snow assignment_group_name="Security Team"
+| dedup sys_id 
+| timechart span=7d avg(u_age) as tic_age_avg
+| eval tic_age_avg=round(tic_age_avg)
+| fillnull value=0 tic_age_avg</query>
+          <earliest>-2mon</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="height">115</option>
+        <option name="rangeValues">[0,5,7,30]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="useColors">1</option>
+      </single>
+      <single>
+        <title>Service Now Tickets Created Today</title>
+        <search>
+          <query>index=its_snow eventtype=* assignment_group_name="Security Team"
+| dedup sys_id 
+| timechart span=1d count(sys_id)</query>
+          <earliest>-7d@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="height">115</option>
+        <option name="rangeValues">[0,1,4,10]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="useColors">1</option>
+      </single>
+      <single>
+        <title>Aged Incidents ( &gt;30 Days)</title>
+        <search>
+          <query>index=its_snow eventtype=snow_incident assignment_group_name="Security Team" u_age &gt; 30
+| dedup sys_id 
+| timechart span=7d count</query>
+          <earliest>-2mon</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,5,7,30]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="useColors">1</option>
+      </single>
+      <single>
+        <title>Open Incidents | 7 Day Comparison</title>
+        <search>
+          <query>index=its_snow eventtype=snow_incident assignment_group_name="Security Team" active=true
+| dedup sys_id 
+| timechart span=7d count</query>
+          <earliest>-2mon</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,2,5,10]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Security Operations Service Now for the Past Two Months</title>
+      <single>
+        <title>Service Now Tickets Created | 7 Day Comparison</title>
+        <search>
+          <query>index=its_snow assignment_group_name="Security Operations"
+| dedup sys_id 
+| timechart span=7d count</query>
+          <earliest>-2mon@mon</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x65a637","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,1,2]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="useColors">1</option>
+      </single>
+      <single>
+        <title>Average Age of All Tickets in Days | 7 Day Comparison</title>
+        <search>
+          <query>index=its_snow assignment_group_name="Security Operations"
+| dedup sys_id 
+| timechart span=7d avg(u_age) as tic_age_avg
+| eval tic_age_avg=round(tic_age_avg)
+| fillnull value=0 tic_age_avg</query>
+          <earliest>-2mon</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="height">115</option>
+        <option name="rangeValues">[0,5,7,30]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="useColors">1</option>
+      </single>
+      <single>
+        <title>Service Now Tickets Created Today</title>
+        <search>
+          <query>index=its_snow assignment_group_name="Security Operations"
+| dedup sys_id 
+| timechart span=1d count(sys_id)</query>
+          <earliest>-2mon@mon</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="height">115</option>
+        <option name="rangeValues">[0,1,4,10]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="useColors">1</option>
+      </single>
+      <single>
+        <title>Aged Incidents ( &gt;30 Days)</title>
+        <search>
+          <query>index=its_snow eventtype=snow_incident assignment_group_name="Security Operations" u_age &gt; 30
+| dedup sys_id 
+| stats count as num_of_tickets</query>
+          <earliest>-2mon</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="rangeValues">[0,5,7,30]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="useColors">1</option>
+      </single>
+      <single>
+        <title>Open Incidents | 7 Day Comparison</title>
+        <search>
+          <query>index=its_snow eventtype=snow_incident assignment_group_name="Security Operations" active=true
+| dedup sys_id 
+| timechart span=7d count</query>
+          <earliest>-2mon</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="rangeValues">[0,2,5,10]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Palo Alto</title>
+      <table>
+        <title>Total Alerts by Day (High &amp; Critical)</title>
+        <search>
+          <query>index=summary source="PA_Daily_Status"
+| where high&gt;0 OR crit&gt;0
+| bin span=1d  _time 
+| stats sparkline(sum(total), 1d) as spark, sum(total) as total, latest(total) as last_time by category
+| streamstats avg(spark) as spAVG, last(spark) as Day by category
+| eval Avg = round(spAVG, 2)
+| table category, spark, Avg, Day total
+| sort - total
+| where Avg &gt; 1 AND Day != 0
+| rename category as Category, spark as Sparkline, Avg, as "Daily Average", Day as "Total Today", total as "Overall Total"</query>
+          <earliest>-30d@d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">18</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">row</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="totalsRow">false</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Palo Alto</title>
+      <table>
+        <title>External Alerts by Day (High &amp; Critical)</title>
+        <search>
+          <query>index=summary source="PA_Daily_Status" "src_zone=outside" 
+| where high&gt;0 OR crit&gt;0
+| bin span=1d  _time 
+| stats sparkline(sum(total), 1d) as spark, sum(total) as total, latest(total) as last_time by category
+| streamstats avg(spark) as spAVG, last(spark) as Day by category
+| eval Avg = round(spAVG, 2)
+| table category, spark, Avg, Day total
+| sort - total
+| where Avg &gt; 1 AND Day != 0
+| rename category as Category, spark as Sparkline, Avg, as "Daily Average", Day as "Total Today", total as "Overall Total"</query>
+          <earliest>-30d@d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">18</option>
+        <option name="drilldown">row</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="totalsRow">false</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Palo Alto</title>
+      <table>
+        <title>Internal Alerts by Day (High &amp; Critical)</title>
+        <search>
+          <query>index=summary source="PA_Daily_Status" "src_zone=inside" 
+| where high&gt;0 OR crit&gt;0
+| bin span=1d  _time 
+| stats sparkline(sum(total), 1d) as spark, sum(total) as total, latest(total) as last_time by category
+| streamstats avg(spark) as spAVG, last(spark) as Day by category
+| eval Avg = round(spAVG, 2)
+| table category, spark, Avg, Day total
+| sort - total
+| where Avg &gt; 1 AND Day != 0
+| rename category as Category, spark as Sparkline, Avg, as "Daily Average", Day as "Total Today", total as "Overall Total"</query>
+          <earliest>-30d@d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">18</option>
+        <option name="drilldown">row</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="totalsRow">false</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Active Directory</title>
+      <table>
+        <title>Top Failed Logins in the last 60 mins</title>
+        <search>
+          <query>index=its_active_directory OR index=ukhc_os_logs EventCode IN (4740, 4625, 4771)
+| eval Account_Name=if(mvcount(Account_Name)&gt;1, mvindex(Account_Name,1), Account_Name), Account_Domain=if(mvcount(Account_Domain)&gt;1, mvindex(Account_Domain,1), Account_Domain)  
+| stats count by Account_Name, Account_Domain, Failure_Reason
+| sort - count</query>
+          <earliest>-60m@m</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">20</option>
+        <option name="dataOverlayMode">heatmap</option>
+        <option name="drilldown">row</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+</dashboard>
