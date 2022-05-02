@@ -1,0 +1,68 @@
+<form version="1.1" theme="dark">
+  <label>Duo Impossible Travel</label>
+  <description>Determines the inputted linkblue's Duo attempts</description>
+  <fieldset submitButton="false">
+    <input type="time" token="trange">
+      <label>Time Range</label>
+      <default>
+        <earliest>-1mon@mon</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <input type="text" token="user_tok">
+        <label>Username</label>
+      </input>
+      <table>
+        <title>User Duo Lookup</title>
+        <search>
+          <query>index=duo username="$user_tok$"
+| eval date=strftime(_time, "%F")
+| fillnull value="NA" location.country
+| stats values(integration) as App, values(reason) as  Reasons, values(location.country) as countries, dc(location.country) as dc_country by date, factor, result
+| sort - date</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Duo SMS Passcode per week</title>
+      <table>
+        <title>Successful login and country count &gt; 1</title>
+        <search>
+          <query>index=duo factor="SMS Passcode" ip!="0.0.0.0" action="success" 
+| bin _time span=7d 
+| eval date=strftime(_time, "%F") 
+| stats values(location.country) as countries, dc(location.country) as dc_country values(integration) as App, values(ip) as IPs by date, username 
+| search dc_country&gt;1 
+| rename dc_country as "Country Count", countries as Countries 
+| rename username as LINK_BLUE_ID 
+| eval LINK_BLUE_ID=upper(LINK_BLUE_ID) 
+| join type=left LINK_BLUE_ID 
+    [ search index="its_security" source=SAP_hana_ActiveEmployees 
+    | dedup LINK_BLUE_ID 
+    | fields LINK_BLUE_ID, POSITION, DEPARTMENT, EMAIL_ADDRESS, FORMATTED_NAME] 
+| rename LINK_BLUE_ID as username</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">25</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">true</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+</form>
