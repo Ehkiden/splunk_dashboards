@@ -1,0 +1,152 @@
+<form>
+  <label>ITS Desktops Hardware Stats</label>
+  <fieldset submitButton="false">
+    <input type="time" token="trange">
+      <label>Time Range</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <chart>
+        <title>Avg User % Usage Over Time</title>
+        <search>
+          <query>index="its_desktops" sourcetype="PerfmonMk:CPU Load"
+| timechart avg(%_User_Time) as avg_user_per, avg(%_Processor_Time) as avg_processor_per, avg(%_Idle_Time) as avg_idle_per</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-45</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked100</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">357</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Avg User % Usage Over Time by Host</title>
+        <search>
+          <query>index="its_desktops" sourcetype="PerfmonMk:CPU Load"
+| timechart avg(%_User_Time) as avg_user_per by host</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-45</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">331</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Avg Processor % Usage Over Time by Host</title>
+        <search>
+          <query>index="its_desktops" sourcetype="PerfmonMk:CPU Load"
+| timechart avg(%_Processor_Time) as avg_processor_per by host</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-45</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="height">314</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Avg RAM Usage Over time</title>
+        <search>
+          <query>index="its_desktops" sourcetype="PerfmonMk:Available Memory"
+| timechart avg(Available_Bytes) as avail_bytes, avg(Committed_Bytes) as com_bytes
+| eval avail_bytes=round((avail_bytes-com_bytes)/1000000000, 2), com_bytes=round(com_bytes/1000000000, 2)
+| rename avail_bytes as "Free GBs", com_bytes as "Committed GBs"</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-45</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">332</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <table>
+        <title>RAM GB size per Host</title>
+        <search>
+          <query>index="its_desktops" sourcetype="PerfmonMk:Available Memory"
+| stats count by Available_Bytes, host
+| sort - Available_Bytes, host
+| dedup host
+| eval Available_Bytes=round(Available_Bytes/1000000000, 2)
+| table host, Available_Bytes</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Avg Available GBs by Host over Time</title>
+        <search>
+          <query>index="its_desktops" sourcetype="PerfmonMk:Available Memory"
+| eval Available_Bytes=round(Available_Bytes/1000000000, 2)
+| timechart avg(Available_Bytes) as ava_bytes by host</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-45</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">369</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Avg Committed Bytes by Host over Time</title>
+        <search>
+          <query>index="its_desktops" sourcetype="PerfmonMk:Available Memory"
+| eval Committed_Bytes=round(Committed_Bytes/1000000000, 2)
+| timechart avg(Committed_Bytes) as com_bytes by host</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-45</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">369</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+</form>
