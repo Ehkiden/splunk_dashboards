@@ -1,0 +1,88 @@
+<form>
+  <label>Index Audit/Access</label>
+  <description>Used to determine user index access and their capabilities.</description>
+  <fieldset submitButton="false">
+    <input type="time" token="trange">
+      <label>Time Range</label>
+      <default>
+        <earliest>-7d@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="filter_tok">
+      <label>Search by</label>
+      <choice value="search_index">index</choice>
+      <choice value="user">user</choice>
+      <default>search_index</default>
+    </input>
+    <input type="text" token="input_tok">
+      <label>Index</label>
+      <initialValue>*</initialValue>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>User Access to Index</title>
+      <table>
+        <search>
+          <query>index=_audit action=search info=granted search=* NOT "search_id='scheduler" NOT "search='|history" NOT "user=splunk-system-user" NOT "search='typeahead" NOT "search='| metadata type=* | search totalCount&gt;0" 
+| rex field=search "index=(?P&lt;search_index&gt;[^ ]+)" 
+| eval search_index=trim(search_index, "\n"), search_index=trim(search_index, "\n|"), search_index=trim(search_index, "\""), search_index=trim(search_index, "\'")
+| stats count by search_index , user
+| sort - count
+| search $filter_tok$="*$input_tok$*"</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>User list and capabilities</title>
+        <search>
+          <query>| rest /services/authentication/users
+| rename title AS user roles AS role
+| mvexpand role
+| fields realname user role
+| join type=outer role [
+  rest /services/authorization/roles
+  | rename title AS role | eval search_index=mvjoin(srchIndexesAllowed," ; ")
+  | fields role search_index]
+| table realname user role search_index
+| search $filter_tok$="*$input_tok$*"</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <input type="text" token="deny_tok">
+        <label>Index</label>
+        <initialValue>*</initialValue>
+      </input>
+      <table>
+        <title>Users who queries index they dont have access to (Its a good thing if there are no results found)</title>
+        <search>
+          <query>index=_audit action=search info=granted search=* NOT "search_id='scheduler" NOT "search='|history" NOT "user=splunk-system-user" NOT "search='typeahead" NOT "search='| metadata type=* | search totalCount&gt;0" 
+| rex field=search "index=(?P&lt;search_index&gt;[^ ]+)" 
+| eval search_index=trim(search_index, "\n"), search_index=trim(search_index, "\n|"), search_index=trim(search_index, "\""), search_index=trim(search_index, "\'")
+| search search_index="*$deny_tok$*" AND info!="granted"
+| stats count by search_index , user, info
+| sort - count</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+</form>
