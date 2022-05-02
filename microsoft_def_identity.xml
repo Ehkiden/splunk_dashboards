@@ -1,0 +1,347 @@
+<form>
+  <label>Microsoft Defender for Identity (formally "Azure ATP Main")</label>
+  <description>Hub for Microsoft Defender for Identity (MDI) alerts and to find any commonalities between the MDI alert and the Cisco ISE logs for possible source of alert issue.</description>
+  <!--
+  <search id="user_base">
+    <query>
+      index="its_o365" sourcetype=its:azureatp
+      | stats count by suser
+    </query>
+    <earliest>$trange.earliest$</earliest>
+    <latest>$trange.latest$</latest>
+  </search> 
+  -->
+  <fieldset submitButton="false">
+    <input type="time" token="trange">
+      <label>Time Range</label>
+      <default>
+        <earliest>-7d@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>New Events by Severity</title>
+      <table>
+        <search>
+          <query>index="its_o365" sourcetype=its:azureatp cs2=new
+| fillnull value=NA shost, suser
+| eval start=strptime(start, "%Y-%m-%dT%H:%M:%S.%N"), start=strftime(start, "%D %H:%M:%S"), sevName=case(severity=3, "Low", severity=5, "Medium", severity=10, "High", true=true, "Unknown"), src_acct=case(shost="NA", suser, suser="NA", shost, true(), suser."____".shost)
+| table start, alertName, src_acct, dets, message, severity, sevName
+| where !isnull(start)
+| sort - severity, start
+| fields - severity</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">20</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">row</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <format type="color" field="sevName">
+          <colorPalette type="map">{"High":#D93F3C,"Medium":#F7BC38,"Low":#3863A0}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <input type="dropdown" token="field_tok" searchWhenChanged="true">
+        <label>Search Field</label>
+        <choice value="src_acct">Source Account</choice>
+        <choice value="alertName">Alert Name</choice>
+        <choice value="sevName">Severity</choice>
+        <default>src_acct</default>
+      </input>
+      <table>
+        <title>Top Events Seen by User or Machine</title>
+        <search>
+          <query>index="its_o365" sourcetype=its:azureatp 
+| fillnull value=NA shost, suser
+| eval start=strptime(start, "%Y-%m-%dT%H:%M:%S.%N"), start=strftime(start, "%D %H:%M:%S"), sevName=case(severity=3, "Low", severity=5, "Medium", severity=10, "High", true=true, "Unknown"), src_acct=case(shost="NA", suser, suser="NA", shost, true(), suser."____".shost)
+| stats count by src_acct, cs2
+| sort - count</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="count">20</option>
+        <option name="drilldown">row</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="totalsRow">true</option>
+        <format type="color" field="count">
+          <colorPalette type="minMidMax" maxColor="#D6563C" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+        <format type="color" field="cs2">
+          <colorPalette type="map">{"new":#ED8440,"update":#3863A0}</colorPalette>
+        </format>
+      </table>
+    </panel>
+    <panel>
+      <chart>
+        <title>Most Frequently Seen Severities by Day</title>
+        <search>
+          <query>index="its_o365" sourcetype=its:azureatp
+| eval sevName=case(severity=3, "Low", severity=5, "Medium", severity=10, "High", true=true, "Unknown")
+| eval day=strftime(_time, "%A")
+| stats count by sevName, day</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.axisTitleY2.visibility">collapsed</option>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="height">664</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+    <panel>
+      <table>
+        <title>Top Alerts</title>
+        <search>
+          <query>index="its_o365" sourcetype=its:azureatp
+| eval sevName=case(severity=3, "Low", severity=5, "Medium", severity=10, "High", true=true, "Unknown")
+| stats count by externalId, dets, sevName, severity
+| rename dets as Details
+| sort - count, severity
+| fields - severity</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="count">40</option>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="totalsRow">true</option>
+        <format type="color" field="count">
+          <colorPalette type="minMidMax" maxColor="#D6563C" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+        <format type="color" field="sevName">
+          <colorPalette type="map">{"High":#D93F3C,"Medium":#F7BC38,"Low":#3863A0}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Cisco ISE Recent Locations | Last 24 Hrs</title>
+        <search>
+          <query>sourcetype=cisco:ise:syslog  
+    [ search index="its_o365" sourcetype=its:azureatp
+    | where !isnull(suser) 
+    | rename suser as UserName
+    | table UserName]
+| rex field=_raw max_match=3 "Called-Station-ID=(?P&lt;AP&gt;[^,|:]*)"
+| dedup AP
+| rex field=_raw max_match=3 "host-name=(?P&lt;host_name&gt;[^,]*)"
+| eval UserName=trim(UserName, "\\"), UserName=rtrim(UserName, "@uky.edu")
+| where !isnull(AP)
+| search AP!="172.24.*"
+| eval AP=if(mvcount(AP)&gt;1, mvindex(AP,1), AP)  
+| lookup uk_combined_coords.csv Name as AP OUTPUT Lat as latitude, Lng as longitude, "Building Name" as bldgName
+| table UserName, AP, _time, latitude, longitude, bldgName,</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <html>
+        <br/>
+        <br/>
+        <font size="6">
+          <b>Cisco ISE Info for Selected Users</b>
+        </font>
+        <br/>
+        <br/>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel depends="$alwaysHideCSS$">
+      <html>
+        <style>
+          #userPanel{
+            width:15% !important;
+          }
+          #mapPanel{
+            width:50% !important;
+          }
+          #dvcPanel{
+            width:35%
+        </style>
+      </html>
+    </panel>
+    <panel id="userPanel">
+      <table>
+        <search id="user_base">
+          <query>index="its_o365" sourcetype=its:azureatp
+              | stats count by suser
+              | sort - count
+              | table suser</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="count">25</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <set token="form.user_tok">$click.value$</set>
+        </drilldown>
+      </table>
+    </panel>
+    <panel id="mapPanel">
+      <input type="multiselect" token="user_tok">
+        <label>Users</label>
+        <fieldForLabel>suser</fieldForLabel>
+        <fieldForValue>suser</fieldForValue>
+        <valuePrefix>"</valuePrefix>
+        <valueSuffix>*"</valueSuffix>
+        <delimiter> </delimiter>
+        <search base="user_base">
+          <query>search suser=*
+          | dedup suser</query>
+        </search>
+      </input>
+      <viz type="leaflet_maps_app.maps-plus">
+        <title>User Geo Locations | past 24 Hrs</title>
+        <search>
+          <query>index=its_network_sec_fw sourcetype=cisco:ise:syslog  UserName IN($user_tok$)
+| rex field=_raw max_match=3 "Called-Station-ID=(?P&lt;AP&gt;[^,|:]*)"
+| lookup uk_combined_coords.csv Name as AP OUTPUT Lat as latitude, Lng as longitude, "Building Name" as bldgName 
+| eval AP=if(mvcount(AP)&gt;1, mvindex(AP,1), AP)
+| eventstats count as total by AP, _time UserName
+| eval _time=strftime(_time, "%D at %H:%M:%S")
+| eval description="&lt;table align=\"center\" border=\"1\"&gt;&lt;tr&gt;&lt;th&gt;UserName&lt;/th&gt;&lt;th&gt;Time&lt;/th&gt;&lt;th&gt;Building&lt;/th&gt;&lt;th&gt;Total_Connections&lt;/th&gt;&lt;th&gt;Access Point&lt;/th&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td align=\"center\"&gt;".UserName."&lt;/td&gt;&lt;td align=\"center\"&gt;"._time."&lt;/td&gt;&lt;td align=\"center\"&gt;".bldgName."&lt;/td&gt;&lt;td&gt;".total."&lt;/td&gt;&lt;td&gt;".AP."&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;"
+| eval tooltip=description
+| fillnull value=NULL
+| table latitude, longitude, AP, tooltip, bldgName, UserName, description
+| where latitude!="NULL"</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="leaflet_maps_app.maps-plus.allPopups">0</option>
+        <option name="leaflet_maps_app.maps-plus.animate">1</option>
+        <option name="leaflet_maps_app.maps-plus.autoFitAndZoom">1</option>
+        <option name="leaflet_maps_app.maps-plus.autoFitAndZoomDelay">500</option>
+        <option name="leaflet_maps_app.maps-plus.bingMaps">0</option>
+        <option name="leaflet_maps_app.maps-plus.bingMapsLabelLanguage">en-US</option>
+        <option name="leaflet_maps_app.maps-plus.bingMapsTileLayer">CanvasLight</option>
+        <option name="leaflet_maps_app.maps-plus.cluster">1</option>
+        <option name="leaflet_maps_app.maps-plus.contextMenu">1</option>
+        <option name="leaflet_maps_app.maps-plus.criticalThreshold">80</option>
+        <option name="leaflet_maps_app.maps-plus.defaultHeight">600</option>
+        <option name="leaflet_maps_app.maps-plus.disableClusteringAtZoom">0</option>
+        <option name="leaflet_maps_app.maps-plus.drilldown">0</option>
+        <option name="leaflet_maps_app.maps-plus.drilldownAction">dblclick</option>
+        <option name="leaflet_maps_app.maps-plus.fullScreen">0</option>
+        <option name="leaflet_maps_app.maps-plus.googlePlacesPosition">topleft</option>
+        <option name="leaflet_maps_app.maps-plus.googlePlacesSearch">0</option>
+        <option name="leaflet_maps_app.maps-plus.googlePlacesZoomLevel">12</option>
+        <option name="leaflet_maps_app.maps-plus.heatmapBlur">15</option>
+        <option name="leaflet_maps_app.maps-plus.heatmapColorGradient">{"0.4":"blue","0.6":"cyan","0.7":"lime","0.8":"yellow","1":"red"}</option>
+        <option name="leaflet_maps_app.maps-plus.heatmapEnable">0</option>
+        <option name="leaflet_maps_app.maps-plus.heatmapMinOpacity">1.0</option>
+        <option name="leaflet_maps_app.maps-plus.heatmapOnly">0</option>
+        <option name="leaflet_maps_app.maps-plus.heatmapRadius">25</option>
+        <option name="leaflet_maps_app.maps-plus.i18nLanguage">en</option>
+        <option name="leaflet_maps_app.maps-plus.layerControl">1</option>
+        <option name="leaflet_maps_app.maps-plus.layerControlCollapsed">1</option>
+        <option name="leaflet_maps_app.maps-plus.mapCenterLat">39.50</option>
+        <option name="leaflet_maps_app.maps-plus.mapCenterLon">-98.35</option>
+        <option name="leaflet_maps_app.maps-plus.mapCenterZoom">6</option>
+        <option name="leaflet_maps_app.maps-plus.mapTile">http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png</option>
+        <option name="leaflet_maps_app.maps-plus.maxClusterRadius">80</option>
+        <option name="leaflet_maps_app.maps-plus.maxSpiderfySize">100</option>
+        <option name="leaflet_maps_app.maps-plus.maxZoom">19</option>
+        <option name="leaflet_maps_app.maps-plus.measureActiveColor">#00ff00</option>
+        <option name="leaflet_maps_app.maps-plus.measureCompletedColor">#0066ff</option>
+        <option name="leaflet_maps_app.maps-plus.measureIconPosition">topright</option>
+        <option name="leaflet_maps_app.maps-plus.measureLocalization">en</option>
+        <option name="leaflet_maps_app.maps-plus.measurePrimaryAreaUnit">acres</option>
+        <option name="leaflet_maps_app.maps-plus.measurePrimaryLengthUnit">feet</option>
+        <option name="leaflet_maps_app.maps-plus.measureSecondaryAreaUnit">sqmiles</option>
+        <option name="leaflet_maps_app.maps-plus.measureSecondaryLengthUnit">miles</option>
+        <option name="leaflet_maps_app.maps-plus.measureTool">1</option>
+        <option name="leaflet_maps_app.maps-plus.minZoom">1</option>
+        <option name="leaflet_maps_app.maps-plus.multiplePopups">0</option>
+        <option name="leaflet_maps_app.maps-plus.pathColorList">#0003F0,#D43C29,darkgreen,0xe2d400,darkred,#23A378</option>
+        <option name="leaflet_maps_app.maps-plus.pathSplitInterval">40</option>
+        <option name="leaflet_maps_app.maps-plus.pathSplits">1</option>
+        <option name="leaflet_maps_app.maps-plus.permanentTooltip">0</option>
+        <option name="leaflet_maps_app.maps-plus.playbackSpeed">100</option>
+        <option name="leaflet_maps_app.maps-plus.playbackTickLength">50</option>
+        <option name="leaflet_maps_app.maps-plus.rangeOneBgColor">#B5E28C</option>
+        <option name="leaflet_maps_app.maps-plus.rangeOneFgColor">#6ECC39</option>
+        <option name="leaflet_maps_app.maps-plus.rangeThreeBgColor">#FD9C73</option>
+        <option name="leaflet_maps_app.maps-plus.rangeThreeFgColor">#F18017</option>
+        <option name="leaflet_maps_app.maps-plus.rangeTwoBgColor">#F1D357</option>
+        <option name="leaflet_maps_app.maps-plus.rangeTwoFgColor">#F0C20C</option>
+        <option name="leaflet_maps_app.maps-plus.refreshInterval">0</option>
+        <option name="leaflet_maps_app.maps-plus.renderer">svg</option>
+        <option name="leaflet_maps_app.maps-plus.scrollWheelZoom">1</option>
+        <option name="leaflet_maps_app.maps-plus.showPathLines">1</option>
+        <option name="leaflet_maps_app.maps-plus.showPlayback">0</option>
+        <option name="leaflet_maps_app.maps-plus.showPlaybackDateControl">1</option>
+        <option name="leaflet_maps_app.maps-plus.showPlaybackPlayControl">1</option>
+        <option name="leaflet_maps_app.maps-plus.showPlaybackSliderControl">1</option>
+        <option name="leaflet_maps_app.maps-plus.showProgress">1</option>
+        <option name="leaflet_maps_app.maps-plus.singleMarkerMode">0</option>
+        <option name="leaflet_maps_app.maps-plus.spiderfyDistanceMultiplier">1</option>
+        <option name="leaflet_maps_app.maps-plus.stickyTooltip">1</option>
+        <option name="leaflet_maps_app.maps-plus.warningThreshold">55</option>
+        <option name="refresh.display">progressbar</option>
+      </viz>
+    </panel>
+    <panel id="dvcPanel">
+      <table>
+        <search>
+          <query>index=its_network_sec_fw sourcetype=cisco:ise:syslog  UserName IN($user_tok$)
+| rex field=_raw max_match=3 "Called-Station-ID=(?P&lt;AP&gt;[^,|:]*)"
+| lookup uk_combined_coords.csv Name as AP OUTPUT "Building Name" as bldgName
+| search AP!="172.24.*"
+| eval AP=if(mvcount(AP)&gt;1, mvindex(AP,1), AP), mac_ip=src_mac." to ".src_ip, UserName=trim(UserName, "\\"), UserName=rtrim(UserName, "@uky.edu")
+| stats dc(src_mac) as dvc_macs, values(mac_ip) , dc(AP) as AP_count count by UserName</query>
+          <earliest>$trange.earliest$</earliest>
+          <latest>$trange.latest$</latest>
+        </search>
+        <option name="count">25</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>PA Threat Count</title>
+        <search>
+          <query>index=its_network_sec_fw sourcetype=pan:threat severity IN ("medium", "high", "critical") earliest=-24h
+| eval user=ltrim(user, "ad\\"), user=ltrim(user, "mc\\")
+    | join user type=left [ search index="its_o365" sourcetype=its:azureatp
+    | rename suser as user
+    | fields user, message]
+| where !isnull(message)
+| stats count by severity, user</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+</form>
